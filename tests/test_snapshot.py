@@ -4,12 +4,21 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from az_rbac_watch.scanner.rbac_scanner import (
+    PrincipalType,
+    RbacScanResult,
+    RoleType,
+    ScannedRoleAssignment,
+    ScannedRoleDefinition,
+    SubscriptionScanResult,
+)
 from az_rbac_watch.scanner.snapshot import (
     Snapshot,
     SnapshotAssignment,
     SnapshotMetadata,
     SnapshotRoleDefinition,
     SnapshotScope,
+    build_snapshot,
     load_snapshot,
     save_snapshot,
 )
@@ -91,3 +100,87 @@ class TestSnapshotModel:
             ),
         )
         assert snapshot.version == "1.0"
+
+
+VALID_TENANT_ID = "11111111-1111-1111-1111-111111111111"
+VALID_SUB_ID = "22222222-2222-2222-2222-222222222222"
+
+
+class TestBuildSnapshot:
+    def test_build_from_scan_result(self) -> None:
+        assignment = ScannedRoleAssignment(
+            id="a-1",
+            scope=f"/subscriptions/{VALID_SUB_ID}",
+            role_definition_id="/providers/Microsoft.Authorization/roleDefinitions/fake",
+            principal_id="p-1",
+            principal_type=PrincipalType.USER,
+            role_name="Reader",
+            role_type=RoleType.BUILT_IN,
+            principal_display_name="Alice",
+        )
+        definition = ScannedRoleDefinition(
+            id="rd-1",
+            role_name="Reader",
+            role_type=RoleType.BUILT_IN,
+        )
+        scan_result = RbacScanResult(
+            subscription_results=[
+                SubscriptionScanResult(
+                    subscription_id=VALID_SUB_ID,
+                    subscription_name="Test-Sub",
+                    assignments=[assignment],
+                    definitions=[definition],
+                )
+            ]
+        )
+        snapshot = build_snapshot(
+            scan_result=scan_result,
+            tenant_id=VALID_TENANT_ID,
+            subscriptions=[{"id": VALID_SUB_ID, "name": "Test-Sub"}],
+            management_groups=[],
+        )
+        assert snapshot.metadata.tenant_id == VALID_TENANT_ID
+        assert len(snapshot.assignments) == 1
+        assert snapshot.assignments[0].id == "a-1"
+        assert snapshot.assignments[0].role_name == "Reader"
+        assert snapshot.assignments[0].principal_display_name == "Alice"
+        assert len(snapshot.role_definitions) == 1
+        assert len(snapshot.scopes.subscriptions) == 1
+
+    def test_build_snapshot_deduplicates(self) -> None:
+        """Assignments should be deduplicated (same behavior as all_assignments)."""
+        assignment = ScannedRoleAssignment(
+            id="a-1",
+            scope=f"/subscriptions/{VALID_SUB_ID}",
+            role_definition_id="/providers/Microsoft.Authorization/roleDefinitions/fake",
+            principal_id="p-1",
+            principal_type=PrincipalType.USER,
+            role_name="Reader",
+            role_type=RoleType.BUILT_IN,
+        )
+        scan_result = RbacScanResult(
+            subscription_results=[
+                SubscriptionScanResult(
+                    subscription_id=VALID_SUB_ID,
+                    subscription_name="Test-Sub",
+                    assignments=[assignment, assignment],
+                )
+            ]
+        )
+        snapshot = build_snapshot(
+            scan_result=scan_result,
+            tenant_id=VALID_TENANT_ID,
+            subscriptions=[],
+            management_groups=[],
+        )
+        assert len(snapshot.assignments) == 1
+
+    def test_build_snapshot_has_tool_version(self) -> None:
+        scan_result = RbacScanResult()
+        snapshot = build_snapshot(
+            scan_result=scan_result,
+            tenant_id=VALID_TENANT_ID,
+            subscriptions=[],
+            management_groups=[],
+        )
+        assert snapshot.metadata.tool_version != ""

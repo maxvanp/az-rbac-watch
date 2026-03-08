@@ -8,10 +8,12 @@ can be compared with the diff module.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import BaseModel
+
+from az_rbac_watch.scanner.rbac_scanner import RbacScanResult
 
 __all__ = [
     "Snapshot",
@@ -19,6 +21,7 @@ __all__ = [
     "SnapshotMetadata",
     "SnapshotRoleDefinition",
     "SnapshotScope",
+    "build_snapshot",
     "load_snapshot",
     "save_snapshot",
 ]
@@ -67,6 +70,70 @@ class Snapshot(BaseModel):
     scopes: SnapshotScope = SnapshotScope()
     assignments: list[SnapshotAssignment] = []
     role_definitions: list[SnapshotRoleDefinition] = []
+
+
+def build_snapshot(
+    *,
+    scan_result: RbacScanResult,
+    tenant_id: str,
+    subscriptions: list[dict[str, str]],
+    management_groups: list[dict[str, str]],
+) -> Snapshot:
+    """Build a Snapshot from an RbacScanResult."""
+    from az_rbac_watch import __version__
+
+    assignments = [
+        SnapshotAssignment(
+            id=a.id,
+            scope=a.scope,
+            role_name=a.role_name,
+            role_type=str(a.role_type) if a.role_type else None,
+            principal_id=a.principal_id,
+            principal_type=str(a.principal_type),
+            principal_display_name=a.principal_display_name,
+        )
+        for a in scan_result.all_assignments
+    ]
+
+    # Deduplicate role definitions across all scopes
+    seen_defs: set[str] = set()
+    role_definitions: list[SnapshotRoleDefinition] = []
+    for sub in scan_result.subscription_results:
+        for d in sub.definitions:
+            if d.id not in seen_defs:
+                seen_defs.add(d.id)
+                role_definitions.append(
+                    SnapshotRoleDefinition(
+                        id=d.id,
+                        role_name=d.role_name,
+                        role_type=str(d.role_type),
+                    )
+                )
+    for mg in scan_result.management_group_results:
+        for d in mg.definitions:
+            if d.id not in seen_defs:
+                seen_defs.add(d.id)
+                role_definitions.append(
+                    SnapshotRoleDefinition(
+                        id=d.id,
+                        role_name=d.role_name,
+                        role_type=str(d.role_type),
+                    )
+                )
+
+    return Snapshot(
+        metadata=SnapshotMetadata(
+            timestamp=datetime.now(tz=UTC),
+            tenant_id=tenant_id,
+            tool_version=__version__,
+        ),
+        scopes=SnapshotScope(
+            subscriptions=subscriptions,
+            management_groups=management_groups,
+        ),
+        assignments=assignments,
+        role_definitions=role_definitions,
+    )
 
 
 def save_snapshot(snapshot: Snapshot, path: str | Path) -> None:
