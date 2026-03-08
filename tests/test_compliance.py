@@ -16,6 +16,8 @@ from az_rbac_watch.analyzers.compliance import (
     Severity,
     _check_orphans,
     check_compliance,
+    check_drift,
+    check_violations,
 )
 from az_rbac_watch.scanner.rbac_scanner import PrincipalType, RoleType
 
@@ -1433,3 +1435,69 @@ class TestOrphanDetection:
         a = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Reader")
         findings = _check_orphans([a])
         assert "remediation" in findings[0].details
+
+
+# ── TestOrphanIntegration ────────────────────────────────────
+
+
+class TestOrphanIntegration:
+    def test_check_drift_includes_orphans(self):
+        orphan = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Reader", assignment_id="orphan-1")
+        normal = make_assignment(
+            principal_type=PrincipalType.USER,
+            role_name="Reader",
+            assignment_id="normal-1",
+            principal_id=VALID_PRINCIPAL_USER,
+        )
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "allow-reader",
+                    "type": "baseline",
+                    "match": {"principal_id": VALID_PRINCIPAL_USER, "role": "Reader"},
+                }
+            ]
+        )
+        scan_result = make_scan_result(assignments=[orphan, normal])
+        report = check_drift(policy, scan_result)
+        orphan_findings = [f for f in report.findings if f.rule_id == ORPHANED_ASSIGNMENT]
+        assert len(orphan_findings) == 1
+
+    def test_check_violations_includes_orphans(self):
+        orphan = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Owner", assignment_id="orphan-1")
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "no-owner",
+                    "type": "governance",
+                    "severity": "critical",
+                    "match": {"role": "Owner"},
+                }
+            ]
+        )
+        scan_result = make_scan_result(assignments=[orphan])
+        report = check_violations(policy, scan_result)
+        orphan_findings = [f for f in report.findings if f.rule_id == ORPHANED_ASSIGNMENT]
+        assert len(orphan_findings) == 1
+
+    def test_check_compliance_includes_orphans(self):
+        orphan = make_assignment(
+            principal_type=PrincipalType.UNKNOWN, role_name="Contributor", assignment_id="orphan-1"
+        )
+        policy = make_policy(
+            rules=[
+                {"name": "baseline", "type": "baseline", "match": {"role": "Reader"}},
+                {"name": "no-owner", "type": "governance", "severity": "high", "match": {"role": "Owner"}},
+            ]
+        )
+        scan_result = make_scan_result(assignments=[orphan])
+        report = check_compliance(policy, scan_result)
+        orphan_findings = [f for f in report.findings if f.rule_id == ORPHANED_ASSIGNMENT]
+        assert len(orphan_findings) == 1
+
+    def test_summary_counts_orphans(self):
+        orphan = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Reader")
+        policy = make_policy()
+        scan_result = make_scan_result(assignments=[orphan])
+        report = check_drift(policy, scan_result)
+        assert report.summary.total_findings >= 1

@@ -352,6 +352,7 @@ def check_drift(
     assignments = scan_result.all_assignments
     baseline_rules = [r for r in policy.rules if r.type == "baseline"]
     findings = _check_drift(baseline_rules, assignments)
+    findings.extend(_check_orphans(assignments))
     return _build_report(policy, scan_result, findings)
 
 
@@ -367,6 +368,7 @@ def check_violations(
     assignments = scan_result.all_assignments
     governance_rules = [r for r in policy.rules if r.type == "governance"]
     findings = _check_governance_rules(governance_rules, assignments)
+    findings.extend(_check_orphans(assignments))
     return _build_report(policy, scan_result, findings)
 
 
@@ -386,5 +388,6 @@ def check_compliance(
     findings: list[ComplianceFinding] = []
     findings.extend(_check_governance_rules(governance_rules, assignments))
     findings.extend(_check_drift(baseline_rules, assignments))
+    findings.extend(_check_orphans(assignments))
 
     return _build_report(policy, scan_result, findings)
