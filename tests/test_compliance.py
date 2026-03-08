@@ -8,11 +8,13 @@ from __future__ import annotations
 from datetime import UTC
 
 from az_rbac_watch.analyzers.compliance import (
+    ORPHANED_ASSIGNMENT,
     OUT_OF_BASELINE,
     ComplianceFinding,
     ComplianceReport,
     ComplianceSummary,
     Severity,
+    _check_orphans,
     check_compliance,
 )
 from az_rbac_watch.scanner.rbac_scanner import PrincipalType, RoleType
@@ -1386,3 +1388,48 @@ class TestWarningsPropagation:
         policy = make_policy()
         report = check_compliance(policy, scan)
         assert report.warnings == []
+
+
+# ── TestOrphanDetection ──────────────────────────────────────
+
+
+class TestOrphanDetection:
+    def test_orphaned_assignment_constant(self):
+        assert ORPHANED_ASSIGNMENT == "ORPHANED_ASSIGNMENT"
+
+    def test_empty_principal_type_is_orphan(self):
+        a = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Reader", principal_display_name=None)
+        findings = _check_orphans([a])
+        assert len(findings) == 1
+        assert findings[0].rule_id == ORPHANED_ASSIGNMENT
+        assert findings[0].severity == Severity.HIGH
+
+    def test_normal_assignment_not_orphan(self):
+        a = make_assignment(principal_type=PrincipalType.USER, role_name="Reader", principal_display_name="Alice")
+        findings = _check_orphans([a])
+        assert len(findings) == 0
+
+    def test_orphan_with_no_role_name_still_detected(self):
+        a = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name=None)
+        findings = _check_orphans([a])
+        assert len(findings) == 1
+
+    def test_orphan_finding_contains_principal_id(self):
+        a = make_assignment(
+            principal_type=PrincipalType.UNKNOWN, role_name="Contributor", principal_id="dead-beef-dead-beef"
+        )
+        findings = _check_orphans([a])
+        assert findings[0].principal_id == "dead-beef-dead-beef"
+        assert findings[0].role_name == "Contributor"
+
+    def test_multiple_orphans(self):
+        a1 = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Reader", assignment_id="orphan-1")
+        a2 = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Contributor", assignment_id="orphan-2")
+        normal = make_assignment(principal_type=PrincipalType.USER, role_name="Reader", assignment_id="normal-1")
+        findings = _check_orphans([a1, a2, normal])
+        assert len(findings) == 2
+
+    def test_orphan_remediation_hint(self):
+        a = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Reader")
+        findings = _check_orphans([a])
+        assert "remediation" in findings[0].details

@@ -18,17 +18,20 @@ from pydantic import BaseModel, Field
 
 from az_rbac_watch.config.policy_model import PolicyModel, Rule, RuleMatch
 from az_rbac_watch.scanner.rbac_scanner import (
+    PrincipalType,
     RbacScanResult,
     ScannedRoleAssignment,
 )
 
 __all__ = [
     "DRIFT",
+    "ORPHANED_ASSIGNMENT",
     "SEVERITY_ORDER",
     "ComplianceFinding",
     "ComplianceReport",
     "ComplianceSummary",
     "Severity",
+    "_check_orphans",
     "check_compliance",
     "check_drift",
     "check_violations",
@@ -43,6 +46,7 @@ DRIFT = "DRIFT"
 # Backward-compatible aliases
 OUT_OF_BASELINE = DRIFT
 GOVERNANCE_VIOLATION = "GOVERNANCE_VIOLATION"
+ORPHANED_ASSIGNMENT = "ORPHANED_ASSIGNMENT"
 
 
 # ── Enums & Models ───────────────────────────────────────────
@@ -269,6 +273,38 @@ def _check_drift(
             )
         )
 
+    return findings
+
+
+def _check_orphans(
+    assignments: list[ScannedRoleAssignment],
+) -> list[ComplianceFinding]:
+    """Detect orphaned assignments — principal deleted from Entra ID."""
+    findings: list[ComplianceFinding] = []
+    for a in assignments:
+        if a.principal_type != PrincipalType.UNKNOWN:
+            continue
+        role_display = a.role_name or "(unknown role)"
+        findings.append(
+            ComplianceFinding(
+                rule_id=ORPHANED_ASSIGNMENT,
+                severity=Severity.HIGH,
+                message=(
+                    f"Orphaned assignment: principal {a.principal_id} "
+                    f"no longer exists in Entra ID — "
+                    f"role {role_display} at {a.scope}"
+                ),
+                assignment_id=a.id,
+                scope=a.scope,
+                principal_id=a.principal_id,
+                principal_display_name="",
+                principal_type=str(a.principal_type),
+                role_name=a.role_name or "",
+                details={
+                    "remediation": "Remove this role assignment — the principal no longer exists",
+                },
+            )
+        )
     return findings
 
 
