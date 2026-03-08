@@ -1,0 +1,234 @@
+# az-rbac-watch — Enterprise Landing Zone Policy
+#
+# A comprehensive policy following the Azure Cloud Adoption Framework
+# landing zone pattern. Covers multiple subscriptions, management groups,
+# team-based baseline rules, and strict governance.
+#
+# Adapt this to your organization:
+#   1. Replace all placeholder IDs (tenant, subscriptions, principal IDs)
+#   2. Adjust group names to match your naming convention
+#   3. Remove or add rules as needed
+#
+# Reference: https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/landing-zone/
+
+version: "2.0"
+
+tenant_id: "00000000-0000-0000-0000-000000000000"
+
+scope: explicit
+
+# ── Subscriptions ────────────────────────────────────────────
+subscriptions:
+  - id: "11111111-1111-1111-1111-111111111111"
+    name: "Production"
+  - id: "22222222-2222-2222-2222-222222222222"
+    name: "Staging"
+  - id: "33333333-3333-3333-3333-333333333333"
+    name: "Development"
+
+# ── Management groups ───────────────────────────────────────
+management_groups:
+  - id: "mg-root"
+    name: "Organization Root"
+  - id: "mg-platform"
+    name: "Platform"
+  - id: "mg-workloads"
+    name: "Workloads"
+
+rules:
+  # ══════════════════════════════════════════════════════════
+  # BASELINE RULES — Expected permissions architecture
+  # ══════════════════════════════════════════════════════════
+
+  # ── Break-glass account ────────────────────────────────────
+  # One emergency account with Owner at root — PIM-eligible in production
+  - name: break-glass-owner
+    type: baseline
+    description: "Break-glass account — Owner at management group root (emergency only)"
+    match:
+      principal_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+      role: Owner
+      scope: /providers/Microsoft.Management/managementGroups/mg-root
+
+  # ── Platform team ──────────────────────────────────────────
+  - name: platform-team-contributor
+    type: baseline
+    description: "Platform team — Contributor on platform management group"
+    match:
+      principal_id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+      role: Contributor
+      scope: /providers/Microsoft.Management/managementGroups/mg-platform
+
+  # ── Network team ───────────────────────────────────────────
+  - name: network-team-prod
+    type: baseline
+    description: "Network team — Network Contributor on production"
+    match:
+      principal_id: "cccccccc-cccc-cccc-cccc-cccccccccccc"
+      role: "Network Contributor"
+      scope: /subscriptions/11111111-1111-1111-1111-111111111111
+
+  - name: network-team-staging
+    type: baseline
+    description: "Network team — Network Contributor on staging"
+    match:
+      principal_id: "cccccccc-cccc-cccc-cccc-cccccccccccc"
+      role: "Network Contributor"
+      scope: /subscriptions/22222222-2222-2222-2222-222222222222
+
+  # ── Security team ──────────────────────────────────────────
+  - name: security-team-reader
+    type: baseline
+    description: "Security team — Security Reader at organization root"
+    match:
+      principal_id: "dddddddd-dddd-dddd-dddd-dddddddddddd"
+      role: "Security Reader"
+      scope: /providers/Microsoft.Management/managementGroups/mg-root
+
+  # ── Workload teams ─────────────────────────────────────────
+  - name: app-team-prod
+    type: baseline
+    description: "Application team — Contributor on production app resource group"
+    match:
+      principal_id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+      role: Contributor
+      scope: /subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-app
+
+  - name: app-team-dev
+    type: baseline
+    description: "Application team — Contributor on development app resource group"
+    match:
+      principal_id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+      role: Contributor
+      scope: /subscriptions/33333333-3333-3333-3333-333333333333/resourceGroups/rg-app-dev
+
+  # ── CI/CD service principals ───────────────────────────────
+  - name: cicd-prod-deploy
+    type: baseline
+    description: "CI/CD service principal — Contributor on production app resource group"
+    match:
+      principal_id: "ffffffff-ffff-ffff-ffff-ffffffffffff"
+      role: Contributor
+      scope: /subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-app
+
+  # ══════════════════════════════════════════════════════════
+  # GOVERNANCE RULES — What is forbidden
+  # ══════════════════════════════════════════════════════════
+
+  # ── Critical ───────────────────────────────────────────────
+
+  - name: no-owner-at-sub
+    type: governance
+    description: "Owner is forbidden at subscription scope — use resource groups"
+    severity: critical
+    remediation: "Remove the Owner assignment or scope it to a resource group"
+    match:
+      scope_prefix: /subscriptions/
+      role: Owner
+
+  - name: no-owner-at-mg
+    type: governance
+    description: "Owner is forbidden at management group scope (except break-glass)"
+    severity: critical
+    remediation: "Remove the Owner assignment — only the break-glass account should have Owner at MG scope"
+    match:
+      scope_prefix: /providers/Microsoft.Management/managementGroups/
+      role: Owner
+
+  - name: no-guest-privileged
+    type: governance
+    description: "Guest accounts must not have Owner, Contributor, or User Access Administrator"
+    severity: critical
+    remediation: "Remove the privileged role from the guest account or convert to member"
+    match:
+      principal_name_contains: "#EXT#"
+      role_in:
+        - Owner
+        - Contributor
+        - "User Access Administrator"
+
+  # ── High ───────────────────────────────────────────────────
+
+  - name: no-direct-users
+    type: governance
+    description: "Direct user assignments are forbidden — use security groups"
+    severity: high
+    remediation: "Add the user to an Entra security group and assign the role to the group"
+    match:
+      principal_type: User
+
+  - name: no-direct-service-principals
+    type: governance
+    description: "Service principals must be assigned roles through groups"
+    severity: high
+    remediation: "Add the service principal to a security group and assign the role to the group"
+    match:
+      principal_type: ServicePrincipal
+
+  - name: no-contributor-at-sub
+    type: governance
+    description: "Contributor at subscription scope is too broad — use resource groups"
+    severity: high
+    remediation: "Scope the Contributor role to a specific resource group"
+    match:
+      scope_prefix: /subscriptions/
+      role: Contributor
+
+  - name: no-uaa-at-sub
+    type: governance
+    description: "User Access Administrator is forbidden at subscription scope"
+    severity: high
+    remediation: "Scope to a resource group or use a custom role with fewer permissions"
+    match:
+      scope_prefix: /subscriptions/
+      role: "User Access Administrator"
+
+  - name: groups-naming-convention
+    type: governance
+    description: "Groups must follow the GRP-PERM-* naming convention"
+    severity: high
+    remediation: "Rename the group to follow GRP-PERM-* convention"
+    match:
+      principal_type: Group
+      principal_name_not_prefix: "GRP-PERM-"
+
+  - name: dev-restricted-roles
+    type: governance
+    description: "Only Reader and Contributor are allowed in development"
+    severity: high
+    remediation: "Change to Reader or Contributor, or move the assignment to another subscription"
+    match:
+      scope_prefix: /subscriptions/33333333-3333-3333-3333-333333333333
+      role_not_in:
+        - Reader
+        - Contributor
+
+  # ── Medium ─────────────────────────────────────────────────
+
+  - name: no-custom-roles-prod
+    type: governance
+    description: "Custom roles are forbidden in production — use built-in roles"
+    severity: medium
+    remediation: "Replace the custom role with a built-in role"
+    match:
+      scope_prefix: /subscriptions/11111111-1111-1111-1111-111111111111
+      role_type: CustomRole
+
+  - name: no-temp-groups
+    type: governance
+    description: "Temporary groups are forbidden — use permanent security groups"
+    severity: medium
+    remediation: "Replace the temporary group with a permanent security group"
+    match:
+      principal_type: Group
+      principal_name_contains: "TEMP"
+
+  - name: no-classic-admins
+    type: governance
+    description: "Classic administrator roles (Co-Admin, Service Admin) must be removed"
+    severity: medium
+    remediation: "Migrate to Azure RBAC roles and remove the classic administrator assignment"
+    match:
+      role_in:
+        - "Co-Administrator"
+        - "Service Administrator"
