@@ -1,0 +1,25 @@
+site_name: Azure Permissions Watch
+site_description: Azure RBAC as Code — drift detection and guardrails
+repo_url: https://github.com/maxvanp/az-rbac-watch
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: cyan
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Commands:
+    - audit: commands/audit.md
+    - scan: commands/scan.md
+    - discover: commands/discover.md
+    - validate: commands/validate.md
+  - Policy Reference: policy-reference.md
+  - Configuration: configuration.md
+  - CI/CD Integration: ci-cd.md
+  - Architecture: architecture.md
+  - Contributing: contributing.md
+plugins:
+  - search
+  - minify:
+      minify_html: true

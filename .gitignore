@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Test policy files and reports (real tenant data)
+test_policy.yaml
+discovered_policy.yaml
+my_policy.yaml
+report.html
+*.report.html
+sandbox/
+
+# Worktrees
+.worktrees/
+
+# Secrets and credentials
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+credentials.json
+secrets.yaml
+
+# OS
+.DS_Store
+Thumbs.db

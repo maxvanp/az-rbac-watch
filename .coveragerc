@@ -1,0 +1,11 @@
+[run]
+source = src/az_perm_watch
+branch = true
+
+[report]
+show_missing = true
+skip_empty = true
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    raise NotImplementedError

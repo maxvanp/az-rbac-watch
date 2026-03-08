@@ -1,0 +1,90 @@
+# Azure Permissions Watch — Governance Rules Starter Kit
+#
+# Copy-paste these governance rules into your policy model to enforce common
+# governance patterns. Adjust the match conditions to fit your environment.
+#
+# Each rule includes a remediation hint that appears in reports.
+
+# ── Critical ──────────────────────────────────────────────
+
+# Owner at subscription scope is a high-risk pattern — use at resource group level instead
+- name: no-owner-at-subscription
+  type: governance
+  description: "Owner is forbidden at subscription scope"
+  severity: critical
+  remediation: "Remove the Owner assignment or scope it to a resource group"
+  match:
+    scope_prefix: /subscriptions/
+    role: Owner
+
+# Guest (B2B) accounts should never have Owner — risk of lateral movement
+- name: no-guest-owners
+  type: governance
+  description: "Guest accounts must not have Owner role"
+  severity: critical
+  remediation: "Remove the Owner assignment from the guest account or convert to member"
+  match:
+    principal_type: User
+    role: Owner
+    # Note: combine with principal_name_contains: "#EXT#" for guest-only targeting
+
+# ── High ──────────────────────────────────────────────────
+
+# Direct user assignments bypass group-based governance — use security groups
+- name: no-direct-users
+  type: governance
+  description: "Users must be assigned roles through groups, not directly"
+  severity: high
+  remediation: "Add the user to an Entra security group and assign the role to the group instead"
+  match:
+    principal_type: User
+
+# Direct service principal assignments — use groups for SP governance too
+- name: no-direct-service-principals
+  type: governance
+  description: "Service principals must be assigned roles through groups"
+  severity: high
+  remediation: "Add the service principal to an Entra security group and assign the role to the group"
+  match:
+    principal_type: ServicePrincipal
+
+# User Access Administrator at subscription scope can grant any role to anyone
+- name: no-uaa-at-subscription
+  type: governance
+  description: "User Access Administrator is forbidden at subscription scope"
+  severity: high
+  remediation: "Scope the User Access Administrator role to a resource group, or use a custom role with fewer permissions"
+  match:
+    scope_prefix: /subscriptions/
+    role: "User Access Administrator"
+
+# ── Medium ────────────────────────────────────────────────
+
+# Custom roles increase complexity and can hide privilege escalation
+- name: no-custom-roles
+  type: governance
+  description: "Custom roles are not allowed — use built-in roles"
+  severity: medium
+  remediation: "Replace the custom role with a built-in role, or request an exception"
+  match:
+    role_type: CustomRole
+
+# Enforce naming convention on groups (adapt prefix to your org)
+- name: groups-naming-convention
+  type: governance
+  description: "Groups must follow the GRP-PERM-* naming convention"
+  severity: medium
+  remediation: "Rename the group to follow the GRP-PERM-* convention, or create a new group"
+  match:
+    principal_type: Group
+    principal_name_not_prefix: "GRP-PERM-"
+
+# Temporary groups indicate manual workarounds that should be cleaned up
+- name: no-temp-groups
+  type: governance
+  description: "Groups containing TEMP are forbidden"
+  severity: medium
+  remediation: "Remove the temporary group and replace with a permanent security group"
+  match:
+    principal_type: Group
+    principal_name_contains: "TEMP"

@@ -1,0 +1,154 @@
+# Azure Permissions Watch — Policy Model Example (v2.0)
+# Ce fichier décrit les règles de conformité pour votre tenant Azure.
+#
+# Deux axes complémentaires :
+#   - `az-rbac-watch scan`  → évalue les baseline rules → détecte le DRIFT
+#   - `az-rbac-watch audit` → évalue les governance rules → détecte les VIOLATIONS
+#
+# Deux types de rules :
+#   - baseline    : définit votre architecture de permissions attendue
+#                   (toute assignation non couverte = DRIFT)
+#   - governance  : définit ce qui est interdit
+#                   (produit un GOVERNANCE_VIOLATION)
+#
+# Générez un draft initial avec `az-rbac-watch discover`, puis ajoutez des governance rules manuellement.
+#
+# Scope modes :
+#   scope: explicit  (défaut) — seuls les scopes listés ci-dessous sont scannés
+#   scope: all                — auto-discovery de tous les scopes accessibles
+#   scope: all + exclude_subscriptions/exclude_management_groups — tout sauf certains scopes
+
+version: "2.0"
+
+# Identifiant du tenant Entra ID
+tenant_id: "00000000-0000-0000-0000-000000000000"  # Remplacez par votre tenant ID
+
+# Mode de scope : "explicit" (défaut) ou "all" (auto-discovery)
+scope: explicit
+
+# Subscriptions à scanner
+subscriptions:
+  - id: "11111111-1111-1111-1111-111111111111"
+    name: "Production"
+  - id: "22222222-2222-2222-2222-222222222222"
+    name: "Development"
+
+# Management groups à scanner (optionnel)
+management_groups:
+  - id: "mg-production"
+    name: "Production"
+
+rules:
+  # ── Baseline rules — votre architecture de permissions ──────
+
+  - name: infra-owners
+    type: baseline
+    description: "GRP-TEAM-INFRA-Owners — Owner sur rg-infra"
+    match:
+      principal_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+      role: Owner
+      scope: /subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-infra
+
+  - name: infra-contributors
+    type: baseline
+    description: "GRP-TEAM-INFRA-Contributors — Contributor sur rg-infra"
+    match:
+      principal_id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+      role: Contributor
+      scope: /subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-infra
+
+  - name: infra-readers
+    type: baseline
+    description: "GRP-TEAM-INFRA-Readers — Reader sur la subscription prod"
+    match:
+      principal_id: "cccccccc-cccc-cccc-cccc-cccccccccccc"
+      role: Reader
+      scope: /subscriptions/11111111-1111-1111-1111-111111111111
+
+  - name: github-actions-deploy
+    type: baseline
+    description: "sp-github-actions-deploy — Contributor sur rg-app"
+    match:
+      principal_id: "dddddddd-dddd-dddd-dddd-dddddddddddd"
+      role: Contributor
+      scope: /subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-app
+
+  - name: dev-contributors
+    type: baseline
+    description: "GRP-TEAM-DEV-Contributors — Contributor sur rg-app-dev"
+    match:
+      principal_id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+      role: Contributor
+      scope: /subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/rg-app-dev
+
+  # ── Governance rules — ce qui est interdit ──────────────────
+
+  # Pas d'Owner au niveau subscription
+  - name: no-owner-at-subscription
+    type: governance
+    description: "Le rôle Owner est interdit au scope subscription"
+    severity: critical
+    remediation: "Retirez l'assignation Owner ou réduisez le scope à un resource group"
+    match:
+      scope_prefix: /subscriptions/
+      role: Owner
+
+  # Pas d'assignation directe à un user
+  - name: no-direct-users
+    type: governance
+    description: "Les users doivent passer par des groupes"
+    severity: high
+    remediation: "Ajoutez l'utilisateur à un groupe Entra et assignez le rôle au groupe"
+    match:
+      principal_type: User
+
+  # Seuls Reader et Contributor autorisés sur le RG dev
+  - name: allowed-roles-dev
+    type: governance
+    description: "Seuls Reader et Contributor sur le RG dev"
+    severity: high
+    remediation: "Changez le rôle en Reader ou Contributor, ou déplacez l'assignation vers un autre scope"
+    match:
+      scope_prefix: /subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/rg-app-dev
+      role_not_in:
+        - Reader
+        - Contributor
+
+  # Pas de custom roles en production
+  - name: no-custom-roles-prod
+    type: governance
+    description: "Custom roles interdits sur la subscription prod"
+    severity: medium
+    remediation: "Remplacez le custom role par un rôle built-in"
+    match:
+      scope_prefix: /subscriptions/11111111-1111-1111-1111-111111111111
+      role_type: CustomRole
+
+  # Service principals = pas de rôle direct
+  - name: sp-require-group
+    type: governance
+    description: "Les service principals doivent passer par des groupes"
+    severity: high
+    remediation: "Ajoutez le service principal à un groupe Entra et assignez le rôle au groupe"
+    match:
+      principal_type: ServicePrincipal
+
+  # Seuls les groupes GRP-PERM-* peuvent avoir des rôles
+  - name: only-permission-groups
+    type: governance
+    description: "Seuls les groupes GRP-PERM-* peuvent avoir des rôles"
+    severity: high
+    remediation: "Renommez le groupe avec le préfixe GRP-PERM-* ou créez un nouveau groupe"
+    match:
+      principal_type: Group
+      principal_name_not_prefix: "GRP-PERM-"
+
+  # Groupes temporaires interdits
+  - name: no-temp-groups
+    type: governance
+    description: "Les groupes contenant TEMP sont interdits"
+    severity: medium
+    remediation: "Supprimez le groupe temporaire et créez un groupe permanent"
+    match:
+      principal_type: Group
+      principal_name_contains: "TEMP"
