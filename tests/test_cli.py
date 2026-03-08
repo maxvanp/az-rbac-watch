@@ -1575,3 +1575,111 @@ class TestSnapshotCommand:
         import json
         data = json.loads(output.read_text())
         assert data["metadata"]["tenant_id"] == VALID_TENANT_ID
+
+
+class TestDiffCommand:
+    def test_diff_requires_two_files(self) -> None:
+        result = runner.invoke(app, ["diff", "one.json"])
+        assert result.exit_code == 2
+
+    def test_diff_file_not_found(self) -> None:
+        result = runner.invoke(app, ["diff", "nonexistent1.json", "nonexistent2.json"])
+        assert result.exit_code == 2
+
+    def test_diff_no_changes(self, tmp_path: Path) -> None:
+        import json
+
+        snapshot_data = {
+            "version": "1.0",
+            "metadata": {
+                "timestamp": "2026-03-08T12:00:00Z",
+                "tenant_id": VALID_TENANT_ID,
+                "tool_version": "0.4.0",
+            },
+            "scopes": {"subscriptions": [], "management_groups": []},
+            "assignments": [
+                {
+                    "id": "a-1",
+                    "scope": "/subscriptions/sub-1",
+                    "role_name": "Reader",
+                    "role_type": "BuiltInRole",
+                    "principal_id": "p-1",
+                    "principal_type": "User",
+                    "principal_display_name": "Alice",
+                }
+            ],
+            "role_definitions": [],
+        }
+        f1 = tmp_path / "old.json"
+        f2 = tmp_path / "new.json"
+        f1.write_text(json.dumps(snapshot_data))
+        f2.write_text(json.dumps(snapshot_data))
+        result = runner.invoke(app, ["diff", str(f1), str(f2)])
+        assert result.exit_code == 0
+        assert "No changes" in result.output
+
+    def test_diff_with_changes(self, tmp_path: Path) -> None:
+        import json
+
+        old_data = {
+            "version": "1.0",
+            "metadata": {
+                "timestamp": "2026-03-08T12:00:00Z",
+                "tenant_id": VALID_TENANT_ID,
+                "tool_version": "0.4.0",
+            },
+            "scopes": {"subscriptions": [], "management_groups": []},
+            "assignments": [
+                {
+                    "id": "a-1",
+                    "scope": "/subscriptions/sub-1",
+                    "role_name": "Reader",
+                    "role_type": "BuiltInRole",
+                    "principal_id": "p-1",
+                    "principal_type": "User",
+                    "principal_display_name": "Alice",
+                }
+            ],
+            "role_definitions": [],
+        }
+        new_data = {
+            "version": "1.0",
+            "metadata": {
+                "timestamp": "2026-03-09T12:00:00Z",
+                "tenant_id": VALID_TENANT_ID,
+                "tool_version": "0.4.0",
+            },
+            "scopes": {"subscriptions": [], "management_groups": []},
+            "assignments": [],
+            "role_definitions": [],
+        }
+        f1 = tmp_path / "old.json"
+        f2 = tmp_path / "new.json"
+        f1.write_text(json.dumps(old_data))
+        f2.write_text(json.dumps(new_data))
+        result = runner.invoke(app, ["diff", str(f1), str(f2)])
+        assert result.exit_code == 1
+        assert "Removed" in result.output or "removed" in result.output
+
+    def test_diff_json_format(self, tmp_path: Path) -> None:
+        import json
+
+        snapshot_data = {
+            "version": "1.0",
+            "metadata": {
+                "timestamp": "2026-03-08T12:00:00Z",
+                "tenant_id": VALID_TENANT_ID,
+                "tool_version": "0.4.0",
+            },
+            "scopes": {"subscriptions": [], "management_groups": []},
+            "assignments": [],
+            "role_definitions": [],
+        }
+        f1 = tmp_path / "old.json"
+        f2 = tmp_path / "new.json"
+        f1.write_text(json.dumps(snapshot_data))
+        f2.write_text(json.dumps(snapshot_data))
+        result = runner.invoke(app, ["diff", str(f1), str(f2), "--format", "json"])
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        assert parsed["summary"]["has_changes"] is False
