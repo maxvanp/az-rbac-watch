@@ -1,0 +1,137 @@
+# az-rbac-watch — Compliance Framework Rules
+#
+# Governance rules mapped to common compliance frameworks:
+#   - CIS Microsoft Azure Foundations Benchmark v2.1
+#   - NIST SP 800-53 Rev. 5
+#   - SOC 2 Trust Services Criteria
+#   - ISO 27001:2022
+#
+# These are MODULAR rules — copy the ones you need into your policy file.
+# Each rule references the framework control it satisfies in its description.
+#
+# Usage:
+#   1. Copy relevant rules into your policy_model.yaml under the `rules:` key
+#   2. Adjust match conditions to your environment
+#   3. Run: az-rbac-watch scan -p policy_model.yaml
+
+# ── Least Privilege ──────────────────────────────────────────
+# CIS 1.23: Ensure no custom subscription owner roles are created
+# NIST AC-6: Least Privilege
+# SOC 2 CC6.3: Logical access security
+
+- name: cis-no-custom-owner-roles
+  type: governance
+  description: "[CIS 1.23] [NIST AC-6] Custom subscription owner roles must not exist"
+  severity: critical
+  remediation: "Delete the custom owner role and use the built-in Owner role with a narrower scope"
+  match:
+    role_type: CustomRole
+    role_in:
+      - Owner
+
+# CIS 1.24: Ensure that no custom subscription contributor roles are created
+- name: cis-no-custom-contributor-roles
+  type: governance
+  description: "[CIS 1.24] [NIST AC-6] Custom subscription contributor roles must not exist"
+  severity: high
+  remediation: "Delete the custom contributor role and use built-in Contributor with a narrower scope"
+  match:
+    role_type: CustomRole
+    role_in:
+      - Contributor
+
+# ── Access Control ───────────────────────────────────────────
+# NIST AC-2: Account Management
+# SOC 2 CC6.1: Logical access security software/infrastructure
+# ISO 27001 A.9.2: User access management
+
+- name: nist-no-direct-users
+  type: governance
+  description: "[NIST AC-2] [SOC2 CC6.1] [ISO A.9.2] Users must be assigned roles through groups"
+  severity: high
+  remediation: "Add the user to a security group and assign the role to the group"
+  match:
+    principal_type: User
+
+- name: nist-no-direct-sp
+  type: governance
+  description: "[NIST AC-2] [SOC2 CC6.1] Service principals must be assigned roles through groups"
+  severity: high
+  remediation: "Add the service principal to a security group and assign the role to the group"
+  match:
+    principal_type: ServicePrincipal
+
+# ── Separation of Duties ────────────────────────────────────
+# NIST AC-5: Separation of Duties
+# SOC 2 CC6.1: Logical access security
+# ISO 27001 A.6.1.2: Segregation of duties
+
+- name: nist-no-owner-at-sub
+  type: governance
+  description: "[NIST AC-5] [SOC2 CC6.1] [ISO A.6.1.2] Owner role at subscription scope violates separation of duties"
+  severity: critical
+  remediation: "Scope the Owner role to a resource group or use Contributor + separate UAA"
+  match:
+    scope_prefix: /subscriptions/
+    role: Owner
+
+- name: nist-no-uaa-at-sub
+  type: governance
+  description: "[NIST AC-5] User Access Administrator at subscription scope violates separation of duties"
+  severity: high
+  remediation: "Scope to a resource group or use a custom role with fewer permissions"
+  match:
+    scope_prefix: /subscriptions/
+    role: "User Access Administrator"
+
+# ── Privileged Access ────────────────────────────────────────
+# NIST AC-6(5): Privileged Accounts
+# CIS 1.22: Ensure fewer than 5 users have Owner role
+# ISO 27001 A.9.2.3: Management of privileged access rights
+
+- name: nist-no-guest-privileged
+  type: governance
+  description: "[NIST AC-6(5)] [ISO A.9.2.3] Guest accounts must not hold privileged roles"
+  severity: critical
+  remediation: "Remove the privileged role from the guest account"
+  match:
+    principal_name_contains: "#EXT#"
+    role_in:
+      - Owner
+      - Contributor
+      - "User Access Administrator"
+
+- name: nist-no-contributor-at-sub
+  type: governance
+  description: "[NIST AC-6] Contributor at subscription scope is overly broad"
+  severity: high
+  remediation: "Scope the Contributor role to a specific resource group"
+  match:
+    scope_prefix: /subscriptions/
+    role: Contributor
+
+# ── Audit and Accountability ────────────────────────────────
+# NIST AU-6: Audit Review, Analysis, and Reporting
+# SOC 2 CC7.2: Monitoring activities
+# ISO 27001 A.12.4: Logging and monitoring
+
+- name: nist-no-custom-roles
+  type: governance
+  description: "[NIST AU-6] [SOC2 CC7.2] Custom roles must be audited — prefer built-in roles"
+  severity: medium
+  remediation: "Replace the custom role with a built-in role or document the exception"
+  match:
+    role_type: CustomRole
+
+# ── Group Governance ─────────────────────────────────────────
+# SOC 2 CC6.2: Registration and authorization
+# ISO 27001 A.9.2.1: User registration and de-registration
+
+- name: soc2-groups-naming
+  type: governance
+  description: "[SOC2 CC6.2] [ISO A.9.2.1] Groups must follow a consistent naming convention"
+  severity: medium
+  remediation: "Rename the group to follow your organization's naming convention (e.g. GRP-PERM-*)"
+  match:
+    principal_type: Group
+    principal_name_not_prefix: "GRP-PERM-"
