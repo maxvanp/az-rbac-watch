@@ -1532,3 +1532,46 @@ class TestOrphansOnlyFlag:
         policy_file.write_text('version: "2.0"\ntenant_id: "11111111-1111-1111-1111-111111111111"\n')
         result = runner.invoke(app, ["scan", "--orphans-only", "-p", str(policy_file)])
         assert result.exit_code == 2
+
+
+class TestSnapshotCommand:
+    def test_snapshot_requires_output(self) -> None:
+        """snapshot without -o should error."""
+        result = runner.invoke(app, ["snapshot", "-t", VALID_TENANT_ID])
+        assert result.exit_code == 2
+
+    def test_snapshot_requires_tenant_id(self) -> None:
+        """snapshot without -t should error (when no policy)."""
+        result = runner.invoke(app, ["snapshot"])
+        assert result.exit_code == 2
+
+    @patch("az_rbac_watch.cli.resolve_display_names")
+    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    def test_snapshot_creates_file(
+        self, mock_list_subs: MagicMock, mock_list_mgs: MagicMock,
+        mock_scan: MagicMock, mock_resolve: MagicMock, tmp_path: Path,
+    ) -> None:
+        mock_list_subs.return_value = [(VALID_SUB_ID, "Test-Sub", VALID_TENANT_ID)]
+        mock_list_mgs.return_value = []
+        mock_scan.return_value = RbacScanResult(
+            subscription_results=[
+                SubscriptionScanResult(
+                    subscription_id=VALID_SUB_ID,
+                    subscription_name="Test-Sub",
+                    assignments=[],
+                )
+            ]
+        )
+        mock_resolve.return_value = mock_scan.return_value
+
+        output = tmp_path / "snapshot.json"
+        result = runner.invoke(app, [
+            "snapshot", "-t", VALID_TENANT_ID, "-o", str(output),
+        ])
+        assert result.exit_code == 0
+        assert output.exists()
+        import json
+        data = json.loads(output.read_text())
+        assert data["metadata"]["tenant_id"] == VALID_TENANT_ID
