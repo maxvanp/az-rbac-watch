@@ -1520,3 +1520,15 @@ class TestNextStepsFooter:
         result = runner.invoke(app, ["scan", "--policy", str(policy_path), "--format", "json"])
         assert "All clear" not in result.output
         assert "Next steps" not in result.output
+
+
+class TestOrphansOnlyFlag:
+    def test_orphans_only_requires_tenant_id(self) -> None:
+        result = runner.invoke(app, ["scan", "--orphans-only"])
+        assert result.exit_code == 2
+
+    def test_orphans_only_incompatible_with_policy(self, tmp_path: Path) -> None:
+        policy_file = tmp_path / "policy.yaml"
+        policy_file.write_text('version: "2.0"\ntenant_id: "11111111-1111-1111-1111-111111111111"\n')
+        result = runner.invoke(app, ["scan", "--orphans-only", "-p", str(policy_file)])
+        assert result.exit_code == 2
