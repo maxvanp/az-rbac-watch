@@ -92,6 +92,7 @@ class ComplianceSummary(BaseModel):
     findings_by_severity: dict[str, int] = Field(default_factory=dict)
     drift_count: int = 0
     violation_count: int = 0
+    orphan_count: int = 0
 
 
 class ComplianceReport(BaseModel):
@@ -315,7 +316,8 @@ def _build_report(
 ) -> ComplianceReport:
     """Build a ComplianceReport from findings."""
     drift_count = sum(1 for f in findings if f.rule_id == DRIFT)
-    violation_count = sum(1 for f in findings if f.rule_id != DRIFT)
+    orphan_count = sum(1 for f in findings if f.rule_id == ORPHANED_ASSIGNMENT)
+    violation_count = sum(1 for f in findings if f.rule_id not in (DRIFT, ORPHANED_ASSIGNMENT))
 
     severity_counts = Counter(f.severity for f in findings)
     summary = ComplianceSummary(
@@ -324,6 +326,7 @@ def _build_report(
         findings_by_severity={str(k): v for k, v in severity_counts.items()},
         drift_count=drift_count,
         violation_count=violation_count,
+        orphan_count=orphan_count,
     )
 
     return ComplianceReport(

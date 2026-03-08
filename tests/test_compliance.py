@@ -1501,3 +1501,50 @@ class TestOrphanIntegration:
         scan_result = make_scan_result(assignments=[orphan])
         report = check_drift(policy, scan_result)
         assert report.summary.total_findings >= 1
+
+
+# ── TestOrphanSummaryCount ───────────────────────────────────
+
+
+class TestOrphanSummaryCount:
+    def test_summary_has_orphan_count(self):
+        orphan = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Reader")
+        policy = make_policy()
+        scan_result = make_scan_result(assignments=[orphan])
+        report = check_drift(policy, scan_result)
+        assert report.summary.orphan_count == 1
+
+    def test_summary_orphan_count_zero(self):
+        normal = make_assignment(principal_type=PrincipalType.USER, role_name="Reader")
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "allow-reader",
+                    "type": "baseline",
+                    "match": {"principal_id": VALID_PRINCIPAL_USER, "role": "Reader"},
+                }
+            ]
+        )
+        scan_result = make_scan_result(assignments=[normal])
+        report = check_drift(policy, scan_result)
+        assert report.summary.orphan_count == 0
+
+    def test_violation_count_excludes_orphans(self):
+        """violation_count should not count orphan findings."""
+        orphan = make_assignment(
+            principal_type=PrincipalType.UNKNOWN, role_name="Owner", assignment_id="orphan-1"
+        )
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "no-owner",
+                    "type": "governance",
+                    "severity": "critical",
+                    "match": {"role": "Owner"},
+                }
+            ]
+        )
+        scan_result = make_scan_result(assignments=[orphan])
+        report = check_violations(policy, scan_result)
+        # The orphan finding should be in orphan_count, not violation_count
+        assert report.summary.orphan_count == 1
