@@ -1,4 +1,4 @@
-"""Utilitaires de regroupement par scope Azure (subscription, management group)."""
+"""Utilities for grouping by Azure scope (subscription, management group)."""
 
 from __future__ import annotations
 
@@ -11,10 +11,10 @@ MG_RE = re.compile(r"^/providers/Microsoft\.Management/managementGroups/([^/]+)"
 
 
 def scope_group_key(scope: str) -> tuple[int, str]:
-    """Extrait une clé de regroupement depuis un scope Azure.
+    """Extract a grouping key from an Azure scope.
 
     Returns:
-        (sort_order, group_id_lower) — 0=MG, 1=subscription, 2=autre.
+        (sort_order, group_id_lower) — 0=MG, 1=subscription, 2=other.
     """
     mg = MG_RE.match(scope)
     if mg:

@@ -1,8 +1,8 @@
-"""Factory pour les clients Azure (ARM) et utilitaires Graph API.
+"""Factory for Azure (ARM) clients and Graph API utilities.
 
-Fournit des fonctions utilitaires pour obtenir les credentials
-et les clients Azure SDK nécessaires au scan RBAC, ainsi que
-la résolution des noms de principals via Microsoft Graph.
+Provides utility functions to obtain credentials and Azure SDK
+clients needed for RBAC scanning, as well as principal name
+resolution via Microsoft Graph.
 """
 
 from __future__ import annotations
@@ -33,17 +33,17 @@ logger = logging.getLogger(__name__)
 
 _GRAPH_SCOPE = "https://graph.microsoft.com/.default"
 _GRAPH_GET_BY_IDS_URL = "https://graph.microsoft.com/v1.0/directoryObjects/getByIds"
-_BATCH_SIZE = 1000  # Limite max de l'API getByIds
+_BATCH_SIZE = 1000  # Max limit of getByIds API
 
 
 _credential: DefaultAzureCredential | None = None
 
 
 def get_credential() -> DefaultAzureCredential:
-    """Retourne un credential Azure (lazy singleton, sans lru_cache).
+    """Return an Azure credential (lazy singleton, without lru_cache).
 
-    Utilise un singleton module-level plutôt que lru_cache pour éviter
-    qu'un credential cassé reste en cache sans possibilité de retry.
+    Uses a module-level singleton instead of lru_cache to avoid
+    a broken credential remaining cached without retry capability.
     """
     global _credential
     if _credential is None:
@@ -52,7 +52,7 @@ def get_credential() -> DefaultAzureCredential:
 
 
 def check_credentials() -> bool:
-    """Vérifie si les credentials Azure sont disponibles."""
+    """Check if Azure credentials are available."""
     try:
         cred = get_credential()
         cred.get_token("https://management.azure.com/.default")
@@ -62,7 +62,7 @@ def check_credentials() -> bool:
 
 
 def get_authorization_client(subscription_id: str) -> AuthorizationManagementClient:
-    """Crée un AuthorizationManagementClient pour la subscription donnée."""
+    """Create an AuthorizationManagementClient for the given subscription."""
     return AuthorizationManagementClient(
         credential=get_credential(),
         subscription_id=subscription_id,
@@ -73,17 +73,17 @@ def resolve_principal_names(
     principal_ids: list[str],
     credential: TokenCredential | None = None,
 ) -> dict[str, tuple[str, str]]:
-    """Résout les noms d'affichage des principals via Microsoft Graph.
+    """Resolve principal display names via Microsoft Graph.
 
-    Appelle POST /directoryObjects/getByIds par batches de 1000 max.
+    Calls POST /directoryObjects/getByIds in batches of max 1000.
 
     Args:
-        principal_ids: Liste de principal IDs à résoudre.
-        credential: Credential Azure (par défaut : DefaultAzureCredential).
+        principal_ids: List of principal IDs to resolve.
+        credential: Azure credential (default: DefaultAzureCredential).
 
     Returns:
         Mapping {principal_id: (display_name, odata_type)}.
-        En cas d'erreur, retourne un dict vide (dégradation gracieuse).
+        On error, returns an empty dict (graceful degradation).
     """
     if not principal_ids:
         return {}
@@ -92,10 +92,10 @@ def resolve_principal_names(
     try:
         token = cred.get_token(_GRAPH_SCOPE)
     except ClientAuthenticationError:
-        logger.warning("Token Graph API indisponible — résolution des noms ignorée")
+        logger.warning("Graph API token unavailable — name resolution skipped")
         return {}
     except Exception:
-        logger.warning("Token Graph API indisponible — résolution des noms ignorée")
+        logger.warning("Graph API token unavailable — name resolution skipped")
         return {}
 
     headers = {"Authorization": f"Bearer {token.token}", "Content-Type": "application/json"}
@@ -120,16 +120,16 @@ def resolve_principal_names(
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 403:
                 logger.warning(
-                    "Accès refusé Graph API (batch %d-%d) — vérifiez la permission Directory.Read.All",
+                    "Graph API access denied (batch %d-%d) — check Directory.Read.All permission",
                     i,
                     i + len(batch),
                 )
             else:
                 logger.warning(
-                    "Erreur HTTP Graph API %d (batch %d-%d)", exc.response.status_code, i, i + len(batch)
+                    "Graph API HTTP error %d (batch %d-%d)", exc.response.status_code, i, i + len(batch)
                 )
         except Exception:
-            logger.warning("Erreur lors de la résolution des noms Graph (batch %d-%d)", i, i + len(batch))
+            logger.warning("Error resolving Graph names (batch %d-%d)", i, i + len(batch))
 
     return result
 
@@ -137,13 +137,13 @@ def resolve_principal_names(
 def list_accessible_subscriptions(
     credential: TokenCredential | None = None,
 ) -> list[tuple[str, str, str]]:
-    """Liste les subscriptions accessibles (Enabled uniquement).
+    """List accessible subscriptions (Enabled only).
 
     Returns:
-        Liste de tuples (subscription_id, display_name, tenant_id).
+        List of tuples (subscription_id, display_name, tenant_id).
 
     Raises:
-        ClientAuthenticationError: Si l'authentification Azure échoue.
+        ClientAuthenticationError: If Azure authentication fails.
     """
     cred = credential or get_credential()
     client = SubscriptionClient(cred)
@@ -166,13 +166,13 @@ def list_accessible_subscriptions(
 def list_accessible_management_groups(
     credential: TokenCredential | None = None,
 ) -> list[tuple[str, str]]:
-    """Liste les management groups accessibles.
+    """List accessible management groups.
 
     Returns:
-        Liste de tuples (mg_id, display_name).
+        List of tuples (mg_id, display_name).
 
     Raises:
-        ClientAuthenticationError: Si l'authentification Azure échoue.
+        ClientAuthenticationError: If Azure authentication fails.
     """
     cred = credential or get_credential()
     client = ManagementGroupsAPI(cred)

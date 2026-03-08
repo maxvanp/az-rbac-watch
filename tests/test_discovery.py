@@ -1,6 +1,6 @@
-"""Tests unitaires pour la résolution Graph et l'auto-discovery.
+"""Unit tests for Graph resolution and auto-discovery.
 
-Tous les appels HTTP/Graph sont mockés — aucun credential requis.
+All HTTP/Graph calls are mocked — no credentials required.
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ class TestResolvePrincipalNames:
 
     @patch("az_rbac_watch.auth.azure_clients.httpx.post")
     def test_batching_over_1000(self, mock_post: MagicMock):
-        """Avec >1000 IDs, 2 appels HTTP sont faits."""
+        """With >1000 IDs, 2 HTTP calls are made."""
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"value": []}
         mock_resp.raise_for_status = MagicMock()
@@ -91,7 +91,7 @@ class TestResolvePrincipalNames:
         resolve_principal_names(ids, credential=cred)
 
         assert mock_post.call_count == 2
-        # Premier batch = 1000, deuxième = 500
+        # First batch = 1000, second = 500
         first_batch = mock_post.call_args_list[0].kwargs["json"]["ids"]
         second_batch = mock_post.call_args_list[1].kwargs["json"]["ids"]
         assert len(first_batch) == 1000
@@ -138,7 +138,7 @@ class TestDiscoverPolicy:
 
     @patch("az_rbac_watch.scanner.discovery.resolve_principal_names")
     def test_unresolved_names_fallback(self, mock_resolve: MagicMock):
-        """Si la résolution échoue, utiliser principal_id comme display_name."""
+        """If resolution fails, use principal_id as display_name."""
         mock_resolve.return_value = {}
         scan = make_scan_result(
             [
@@ -159,7 +159,7 @@ class TestDiscoverPolicy:
 
     @patch("az_rbac_watch.scanner.discovery.resolve_principal_names")
     def test_role_name_none_skipped(self, mock_resolve: MagicMock):
-        """Les assignations avec role_name=None sont ignorées."""
+        """Assignments with role_name=None are ignored."""
         mock_resolve.return_value = {}
         scan = make_scan_result(
             [
@@ -172,7 +172,7 @@ class TestDiscoverPolicy:
 
     @patch("az_rbac_watch.scanner.discovery.resolve_principal_names")
     def test_dedup_by_key(self, mock_resolve: MagicMock):
-        """Les doublons (même principal_id, role, scope) sont dédupliqués."""
+        """Duplicates (same principal_id, role, scope) are deduplicated."""
         mock_resolve.return_value = {}
         scan = make_scan_result(
             [
@@ -195,7 +195,7 @@ class TestDiscoverPolicy:
 
     @patch("az_rbac_watch.scanner.discovery.resolve_principal_names")
     def test_sorted_output(self, mock_resolve: MagicMock):
-        """Les rules sont triées par (scope, role, name)."""
+        """Rules are sorted by (scope, role, name)."""
         mock_resolve.return_value = {}
         scan = make_scan_result(
             [
@@ -228,7 +228,7 @@ class TestDiscoverPolicy:
 
     @patch("az_rbac_watch.scanner.discovery.resolve_principal_names")
     def test_credential_passed_through(self, mock_resolve: MagicMock):
-        """Le credential est passé à resolve_principal_names quand il y a des IDs à résoudre."""
+        """Credential is passed to resolve_principal_names when there are IDs to resolve."""
         mock_resolve.return_value = {}
         # Need assignments with no display_name so resolve_principal_names is called
         scan = make_scan_result(

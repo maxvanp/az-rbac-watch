@@ -1,6 +1,6 @@
-"""Tests unitaires pour le scanner RBAC Azure ARM.
+"""Unit tests for the Azure ARM RBAC scanner.
 
-Tous les appels au SDK Azure sont mockés — aucun credential requis.
+All Azure SDK calls are mocked — no credentials required.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from az_rbac_watch.scanner.rbac_scanner import (
 
 from .conftest import VALID_MG_ID, VALID_SUB_ID, VALID_SUB_ID_2, VALID_TENANT_ID
 
-# ── Helpers de mock ───────────────────────────────────────────
+# ── Mock Helpers ──────────────────────────────────────────────
 
 _DEFAULT_ROLE_DEF_ID = (
     f"/subscriptions/{VALID_SUB_ID}/providers/Microsoft.Authorization"
@@ -42,7 +42,7 @@ _DEFAULT_ROLE_DEF_ID = (
 
 
 def _make_azure_role_assignment(**overrides: object) -> SimpleNamespace:
-    """Simule un objet RoleAssignment tel que retourné par le SDK Azure."""
+    """Mock a RoleAssignment object as returned by the Azure SDK."""
     defaults = {
         "id": f"/subscriptions/{VALID_SUB_ID}/providers/Microsoft.Authorization/roleAssignments/assignment-1",
         "scope": f"/subscriptions/{VALID_SUB_ID}",
@@ -55,7 +55,7 @@ def _make_azure_role_assignment(**overrides: object) -> SimpleNamespace:
 
 
 def _make_azure_role_definition(**overrides: object) -> SimpleNamespace:
-    """Simule un objet RoleDefinition tel que retourné par le SDK Azure."""
+    """Mock a RoleDefinition object as returned by the Azure SDK."""
     defaults = {
         "id": _DEFAULT_ROLE_DEF_ID,
         "role_name": "Reader",
@@ -72,7 +72,7 @@ def _make_mock_client(
     scope_assignments: list | None = None,
     scope_definitions: list | None = None,
 ) -> MagicMock:
-    """Crée un mock d'AuthorizationManagementClient."""
+    """Create a mock AuthorizationManagementClient."""
     client = MagicMock()
     client.role_assignments.list_for_subscription.return_value = assignments or []
     client.role_assignments.list_for_scope.return_value = scope_assignments or []
@@ -140,7 +140,7 @@ class TestScanRoleAssignments:
         assert len(result) == 1
         assert result[0].principal_type == PrincipalType.USER
         assert result[0].principal_id == "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-        assert result[0].role_name is None  # Pas encore résolu
+        assert result[0].role_name is None  # Not yet resolved
 
     def test_multiple_assignments(self):
         assignments = [
@@ -314,7 +314,7 @@ class TestScanSubscription:
         assert len(result.assignments) == 1
         assert len(result.definitions) == 1
         assert result.errors == []
-        # Vérifie que le role_name a été résolu
+        # Verify that role_name was resolved
         assert result.assignments[0].role_name == "Reader"
 
     def test_api_error_captured(self):
@@ -418,7 +418,7 @@ class TestScanManagementGroup:
 
 class TestRbacScanResultDeduplication:
     def test_mg_and_sub_deduplicated(self):
-        """Les assignments présentes dans MG ET sub ne sont comptées qu'une fois."""
+        """Assignments present in both MG and sub are counted only once."""
         shared_assignment = ScannedRoleAssignment(
             id="shared-assignment-1",
             scope="/providers/Microsoft.Management/managementGroups/mg-1",
@@ -446,7 +446,7 @@ class TestRbacScanResultDeduplication:
         assert len(result.all_assignments) == 1
 
     def test_mg_preferred_over_sub(self):
-        """L'assignment du MG est gardée (traitée en premier)."""
+        """The MG assignment is kept (processed first)."""
         mg_assignment = ScannedRoleAssignment(
             id="same-id",
             scope="/providers/Microsoft.Management/managementGroups/mg-1",
@@ -484,7 +484,7 @@ class TestRbacScanResultDeduplication:
         assert "managementGroups" in all_a[0].scope
 
     def test_unique_assignments_all_included(self):
-        """Des assignments avec des IDs différents sont toutes incluses."""
+        """Assignments with different IDs are all included."""
         mg_a = ScannedRoleAssignment(
             id="mg-only",
             scope="/providers/Microsoft.Management/managementGroups/mg-1",
@@ -518,7 +518,7 @@ class TestRbacScanResultDeduplication:
         assert len(result.all_assignments) == 2
 
     def test_errors_combined(self):
-        """Les erreurs des MG et des subs sont toutes remontées."""
+        """Errors from MG and subs are all propagated."""
         result = RbacScanResult(
             management_group_results=[
                 ManagementGroupScanResult(
@@ -604,7 +604,7 @@ class TestScanRbac:
         assert result.subscription_results[0].assignments == []
 
     def test_dependency_injection(self, minimal_policy: PolicyModel):
-        """Vérifie que le client_factory est bien appelé avec le bon subscription_id."""
+        """Verify that client_factory is called with the correct subscription_id."""
         factory = MagicMock(return_value=_make_mock_client())
 
         scan_rbac(minimal_policy, client_factory=factory)
@@ -612,15 +612,15 @@ class TestScanRbac:
         factory.assert_called_once_with(VALID_SUB_ID)
 
     def test_default_factory_not_called_when_overridden(self, minimal_policy: PolicyModel):
-        """Vérifie que get_authorization_client n'est pas appelé quand on injecte un factory."""
+        """Verify that get_authorization_client is not called when injecting a factory."""
         custom_client = _make_mock_client()
         result = scan_rbac(minimal_policy, client_factory=lambda _: custom_client)
 
-        # Si on arrive ici sans erreur d'auth, c'est que le factory par défaut n'a pas été utilisé
+        # If we reach here without auth error, it means the default factory was not used
         assert len(result.subscription_results) == 1
 
     def test_mg_only(self):
-        """Scan avec uniquement des management groups (pas de subscriptions)."""
+        """Scan with only management groups (no subscriptions)."""
         policy = PolicyModel(
             version="2.0",
             tenant_id=VALID_TENANT_ID,
@@ -640,7 +640,7 @@ class TestScanRbac:
         assert len(result.all_assignments) == 1
 
     def test_mg_and_subs(self):
-        """Scan avec management groups ET subscriptions."""
+        """Scan with management groups AND subscriptions."""
         policy = PolicyModel(
             version="2.0",
             tenant_id=VALID_TENANT_ID,
@@ -670,7 +670,7 @@ class TestScanRbac:
         assert len(result.all_assignments) == 2
 
     def test_mg_factory_error(self):
-        """Erreur factory pour un MG est capturée."""
+        """Factory error for an MG is captured."""
         policy = PolicyModel(
             version="2.0",
             tenant_id=VALID_TENANT_ID,
@@ -687,7 +687,7 @@ class TestScanRbac:
         assert "Auth failed" in result.management_group_results[0].errors[0]
 
     def test_mg_uses_dummy_sub_id_when_no_subs(self):
-        """Sans subscription, le factory reçoit un dummy sub ID."""
+        """Without subscriptions, the factory receives a dummy sub ID."""
         policy = PolicyModel(
             version="2.0",
             tenant_id=VALID_TENANT_ID,
@@ -700,7 +700,7 @@ class TestScanRbac:
         factory.assert_called_once_with("00000000-0000-0000-0000-000000000000")
 
     def test_mg_uses_first_sub_id(self):
-        """Avec subscriptions, le factory reçoit le premier sub ID pour le scan MG."""
+        """With subscriptions, the factory receives the first sub ID for MG scan."""
         policy = PolicyModel(
             version="2.0",
             tenant_id=VALID_TENANT_ID,
@@ -901,7 +901,7 @@ class TestTypedExceptions:
 
         result = scan_subscription(client, VALID_SUB_ID)
         assert len(result.errors) == 1
-        assert "Accès refusé" in result.errors[0]
+        assert "Access denied" in result.errors[0]
 
     def test_http_429_subscription(self):
         """HttpResponseError 429 → throttling message."""
@@ -914,7 +914,7 @@ class TestTypedExceptions:
 
         result = scan_subscription(client, VALID_SUB_ID)
         assert len(result.errors) == 1
-        assert "Throttling" in result.errors[0]
+        assert "throttling" in result.errors[0].lower()
 
     def test_auth_error_management_group(self):
         """ClientAuthenticationError on MG scan propagates."""
@@ -939,7 +939,7 @@ class TestTypedExceptions:
 
         result = scan_management_group(client, VALID_MG_ID)
         assert len(result.errors) == 1
-        assert "Accès refusé" in result.errors[0]
+        assert "Access denied" in result.errors[0]
 
     def test_generic_exception_fallback(self):
         """Unknown exception → generic message."""
@@ -948,7 +948,7 @@ class TestTypedExceptions:
 
         result = scan_subscription(client, VALID_SUB_ID)
         assert len(result.errors) == 1
-        assert "inattendue" in result.errors[0].lower()
+        assert "unexpected" in result.errors[0].lower()
 
     def test_auth_error_factory_sub_propagates(self, minimal_policy: PolicyModel):
         """ClientAuthenticationError in client_factory propagates for subscriptions."""

@@ -1,7 +1,7 @@
-"""Factories partagées pour la création d'objets de test.
+"""Shared factories for creating test objects.
 
-Centralise les helpers make_assignment(), make_scan_result(), make_policy()
-utilisés par plusieurs fichiers de tests.
+Centralizes the helpers make_assignment(), make_scan_result(), make_policy()
+used by multiple test files.
 """
 
 from __future__ import annotations

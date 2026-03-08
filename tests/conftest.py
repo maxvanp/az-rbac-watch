@@ -1,4 +1,4 @@
-"""Fixtures partagées pour les tests Azure Permissions Watch."""
+"""Shared fixtures for Azure Permissions Watch tests."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ VALID_PRINCIPAL_GUEST = "dddddddd-dddd-dddd-dddd-dddddddddddd"
 
 @pytest.fixture()
 def minimal_policy() -> PolicyModel:
-    """Retourne un PolicyModel minimal valide avec une subscription."""
+    """Return a minimal valid PolicyModel with one subscription."""
     return PolicyModel(
         version="2.0",
         tenant_id=VALID_TENANT_ID,

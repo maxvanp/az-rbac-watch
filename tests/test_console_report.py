@@ -57,7 +57,7 @@ def _report_with_findings() -> ComplianceReport:
             ComplianceFinding(
                 rule_id=OUT_OF_BASELINE,
                 severity=Severity.HIGH,
-                message="Assignation non autorisée",
+                message="Unauthorized assignment",
                 principal_id="aaaa-bbbb",
                 role_name="Contributor",
                 scope="/subscriptions/sub1",
@@ -65,7 +65,7 @@ def _report_with_findings() -> ComplianceReport:
             ComplianceFinding(
                 rule_id="no-direct-users",
                 severity=Severity.MEDIUM,
-                message="Violation de règle governance",
+                message="Governance rule violation",
                 principal_id="cccc-dddd",
                 role_name="Reader",
                 scope="/subscriptions/sub2",
@@ -166,16 +166,16 @@ class TestPrintComplianceReportWithErrors:
     def test_scan_errors_displayed(self) -> None:
         console, buf = _make_console()
         report = _empty_report()
-        report.scan_errors = ["Erreur d'accès à la subscription X", "Timeout API"]
+        report.scan_errors = ["Access error on subscription X", "API Timeout"]
         print_compliance_report(report, console=console)
         output = buf.getvalue()
-        assert "Erreur" in output
-        assert "Timeout API" in output
+        assert "Access" in output
+        assert "Timeout" in output
 
     def test_scan_errors_panel_title(self) -> None:
         console, buf = _make_console()
         report = _empty_report()
-        report.scan_errors = ["Problème réseau"]
+        report.scan_errors = ["Network error"]
         print_compliance_report(report, console=console)
         output = buf.getvalue()
         assert "Scan errors" in output

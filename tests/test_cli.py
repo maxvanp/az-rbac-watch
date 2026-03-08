@@ -24,7 +24,7 @@ VALID_TENANT_ID = "11111111-1111-1111-1111-111111111111"
 
 @pytest.fixture(autouse=True)
 def _mock_check_credentials() -> object:
-    """Mock check_credentials pour tous les tests CLI — évite les appels Azure réels."""
+    """Mock check_credentials for all CLI tests — avoids actual Azure calls."""
     with patch("az_rbac_watch.cli.check_credentials", return_value=True):
         yield
 VALID_SUB_ID = "22222222-2222-2222-2222-222222222222"
@@ -1041,7 +1041,7 @@ class TestActionableErrorMessages:
     @patch("az_rbac_watch.cli.list_accessible_management_groups")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
     def test_no_tenant_id_shows_actionable_message(self, mock_list_subs, mock_list_mgs) -> None:
-        """Impossible de résoudre le tenant_id → message avec étapes correctives."""
+        """Cannot resolve tenant_id → message with remediation steps."""
         mock_list_subs.return_value = [(VALID_SUB_ID, "Prod", "")]  # empty tenant_id
         mock_list_mgs.return_value = []
 
@@ -1054,7 +1054,7 @@ class TestActionableErrorMessages:
     @patch("az_rbac_watch.cli.list_accessible_management_groups")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
     def test_no_accessible_subscriptions_shows_actionable_message(self, mock_list_subs, mock_list_mgs) -> None:
-        """Aucun scope accessible → message avec étapes correctives."""
+        """No accessible scopes → message with remediation steps."""
         mock_list_subs.return_value = []
         mock_list_mgs.return_value = []
 
@@ -1068,7 +1068,7 @@ class TestActionableErrorMessages:
     @patch("az_rbac_watch.cli.scan_rbac")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
     def test_adhoc_scan_warning_is_bold(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
-        """Le message ad-hoc scan contient le texte attendu (bold yellow en vrai terminal)."""
+        """Ad-hoc scan message contains expected text (bold yellow in real terminal)."""
         mock_list_subs.return_value = [(VALID_SUB_ID, "Prod", VALID_TENANT_ID)]
         mock_scan.return_value = _mock_scan_result(with_assignments=False)
 
@@ -1080,7 +1080,7 @@ class TestActionableErrorMessages:
     @patch("az_rbac_watch.cli.scan_rbac")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
     def test_adhoc_audit_default_rules_warning(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
-        """Le message ad-hoc audit contient le texte attendu (bold yellow en vrai terminal)."""
+        """Ad-hoc audit message contains expected text (bold yellow in real terminal)."""
         mock_list_subs.return_value = [(VALID_SUB_ID, "Prod", VALID_TENANT_ID)]
         mock_scan.return_value = _mock_scan_result(with_assignments=True)
 
@@ -1110,7 +1110,7 @@ class TestQuietFlag:
         mock_scan.return_value = _mock_scan_result(with_assignments=True)
 
         result = runner.invoke(app, ["--quiet", "audit", "--policy", str(policy_path)])
-        # Les messages de statut ne doivent pas apparaître
+        # Status messages must not appear
         assert "Auto-discover" not in result.output
         assert "Resolving" not in result.output
 
@@ -1133,7 +1133,7 @@ class TestQuietFlag:
 
 
 class TestNoColorFlag:
-    """Tests pour le flag --no-color qui désactive la coloration."""
+    """Tests for the --no-color flag which disables coloring."""
 
     def test_no_color_flag_accepted(self, tmp_path: Path) -> None:
         """--no-color flag is accepted without error."""
@@ -1171,10 +1171,10 @@ class TestNoColorFlag:
 
 
 class TestDryRun:
-    """Tests pour le flag --dry-run sur scan, audit, discover."""
+    """Tests for the --dry-run flag on scan, audit, discover."""
 
     def test_scan_dry_run(self, tmp_path: Path) -> None:
-        """--dry-run valide la policy et affiche le plan sans appeler Azure."""
+        """--dry-run validates the policy and shows the plan without calling Azure."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
         result = runner.invoke(app, ["scan", "--policy", str(policy_path), "--dry-run"])
         assert result.exit_code == 0
@@ -1184,13 +1184,13 @@ class TestDryRun:
 
     @patch("az_rbac_watch.cli.scan_rbac")
     def test_scan_dry_run_no_api_call(self, mock_scan: MagicMock, tmp_path: Path) -> None:
-        """--dry-run ne doit PAS appeler scan_rbac."""
+        """--dry-run must NOT call scan_rbac."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
         runner.invoke(app, ["scan", "--policy", str(policy_path), "--dry-run"])
         mock_scan.assert_not_called()
 
     def test_audit_dry_run(self, tmp_path: Path) -> None:
-        """--dry-run sur audit affiche le plan sans appeler Azure."""
+        """--dry-run on audit shows the plan without calling Azure."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
         result = runner.invoke(app, ["audit", "--policy", str(policy_path), "--dry-run"])
         assert result.exit_code == 0
@@ -1199,13 +1199,13 @@ class TestDryRun:
 
     @patch("az_rbac_watch.cli.scan_rbac")
     def test_audit_dry_run_no_api_call(self, mock_scan: MagicMock, tmp_path: Path) -> None:
-        """--dry-run sur audit ne doit PAS appeler scan_rbac."""
+        """--dry-run on audit must NOT call scan_rbac."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
         runner.invoke(app, ["audit", "--policy", str(policy_path), "--dry-run"])
         mock_scan.assert_not_called()
 
     def test_discover_dry_run(self, tmp_path: Path) -> None:
-        """--dry-run sur discover affiche le plan sans appeler Azure."""
+        """--dry-run on discover shows the plan without calling Azure."""
         policy_path = _write_policy(tmp_path)
         result = runner.invoke(app, ["discover", "--policy", str(policy_path), "--dry-run"])
         assert result.exit_code == 0
@@ -1213,13 +1213,13 @@ class TestDryRun:
 
     @patch("az_rbac_watch.cli.scan_rbac")
     def test_discover_dry_run_no_api_call(self, mock_scan: MagicMock, tmp_path: Path) -> None:
-        """--dry-run sur discover ne doit PAS appeler scan_rbac."""
+        """--dry-run on discover must NOT call scan_rbac."""
         policy_path = _write_policy(tmp_path)
         runner.invoke(app, ["discover", "--policy", str(policy_path), "--dry-run"])
         mock_scan.assert_not_called()
 
     def test_scan_dry_run_with_mg(self, tmp_path: Path) -> None:
-        """--dry-run affiche les management groups dans le plan."""
+        """--dry-run shows management groups in the plan."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True, with_mg=True)
         result = runner.invoke(app, ["scan", "--policy", str(policy_path), "--dry-run"])
         assert result.exit_code == 0
@@ -1228,10 +1228,10 @@ class TestDryRun:
 
 
 class TestAutoDetectPolicy:
-    """Tests pour l'auto-détection de fichier de politique dans le répertoire courant."""
+    """Tests for auto-detection of policy file in the current directory."""
 
     def _write_policy_in_cwd(self, cwd: Path, filename: str = "policy.yaml") -> Path:
-        """Écrit un fichier de politique minimal dans le répertoire donné."""
+        """Write a minimal policy file to the given directory."""
         data = {
             "version": "2.0",
             "tenant_id": VALID_TENANT_ID,
@@ -1242,7 +1242,7 @@ class TestAutoDetectPolicy:
         return p
 
     def test_detect_policy_yaml(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_detect_policy_file trouve policy.yaml dans le répertoire courant."""
+        """_detect_policy_file finds policy.yaml in the current directory."""
         monkeypatch.chdir(tmp_path)
         self._write_policy_in_cwd(tmp_path, "policy.yaml")
         detected = _detect_policy_file()
@@ -1250,7 +1250,7 @@ class TestAutoDetectPolicy:
         assert detected.name == "policy.yaml"
 
     def test_detect_dot_az_rbac_watch_yaml(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_detect_policy_file trouve .az-rbac-watch.yaml dans le répertoire courant."""
+        """_detect_policy_file finds .az-rbac-watch.yaml in the current directory."""
         monkeypatch.chdir(tmp_path)
         self._write_policy_in_cwd(tmp_path, ".az-rbac-watch.yaml")
         detected = _detect_policy_file()
@@ -1258,7 +1258,7 @@ class TestAutoDetectPolicy:
         assert detected.name == ".az-rbac-watch.yaml"
 
     def test_detect_az_rbac_watch_yaml(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_detect_policy_file trouve az-rbac-watch.yaml dans le répertoire courant."""
+        """_detect_policy_file finds az-rbac-watch.yaml in the current directory."""
         monkeypatch.chdir(tmp_path)
         self._write_policy_in_cwd(tmp_path, "az-rbac-watch.yaml")
         detected = _detect_policy_file()
@@ -1266,7 +1266,7 @@ class TestAutoDetectPolicy:
         assert detected.name == "az-rbac-watch.yaml"
 
     def test_detect_priority_order(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """policy.yaml est prioritaire sur .az-rbac-watch.yaml."""
+        """policy.yaml takes priority over .az-rbac-watch.yaml."""
         monkeypatch.chdir(tmp_path)
         self._write_policy_in_cwd(tmp_path, "policy.yaml")
         self._write_policy_in_cwd(tmp_path, ".az-rbac-watch.yaml")
@@ -1275,13 +1275,13 @@ class TestAutoDetectPolicy:
         assert detected.name == "policy.yaml"
 
     def test_detect_no_policy_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_detect_policy_file retourne None quand aucun fichier n'est trouvé."""
+        """_detect_policy_file returns None when no file is found."""
         monkeypatch.chdir(tmp_path)
         detected = _detect_policy_file()
         assert detected is None
 
     def test_scan_auto_detect_policy_yaml(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """scan sans --policy utilise policy.yaml trouvé dans le cwd (via --dry-run)."""
+        """scan without --policy uses policy.yaml found in cwd (via --dry-run)."""
         monkeypatch.chdir(tmp_path)
         self._write_policy_in_cwd(tmp_path, "policy.yaml")
         result = runner.invoke(app, ["scan", "--dry-run"])
@@ -1289,7 +1289,7 @@ class TestAutoDetectPolicy:
         assert "Using policy file: ./policy.yaml" in result.output
 
     def test_scan_auto_detect_dot_az_rbac_watch(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """scan sans --policy utilise .az-rbac-watch.yaml trouvé dans le cwd."""
+        """scan without --policy uses .az-rbac-watch.yaml found in cwd."""
         monkeypatch.chdir(tmp_path)
         self._write_policy_in_cwd(tmp_path, ".az-rbac-watch.yaml")
         result = runner.invoke(app, ["scan", "--dry-run"])
@@ -1297,25 +1297,25 @@ class TestAutoDetectPolicy:
         assert "Using policy file: ./.az-rbac-watch.yaml" in result.output
 
     def test_no_auto_detect_when_policy_flag_given(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """--policy explicite prend la priorité sur l'auto-détection."""
+        """--policy explicit takes priority over auto-detection."""
         monkeypatch.chdir(tmp_path)
-        # Écrire deux fichiers : un dans cwd, un dans un sous-dossier
+        # Write two files: one in cwd, one in a subfolder
         self._write_policy_in_cwd(tmp_path, "policy.yaml")
         sub = tmp_path / "sub"
         sub.mkdir()
         explicit = self._write_policy_in_cwd(sub, "explicit.yaml")
         result = runner.invoke(app, ["scan", "--policy", str(explicit), "--dry-run"])
         assert result.exit_code == 0
-        # Ne doit PAS afficher le message d'auto-détection
+        # Must NOT display the auto-detection message
         assert "Using policy file:" not in result.output
 
     @patch("az_rbac_watch.cli._build_model_from_args")
     def test_no_policy_file_falls_through(
         self, mock_build: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Quand aucun fichier de politique n'est dans le cwd, on tombe en mode ad-hoc."""
+        """When no policy file is in cwd, we fall through to ad-hoc mode."""
         monkeypatch.chdir(tmp_path)
-        # Simuler _build_model_from_args pour éviter les appels Azure
+        # Mock _build_model_from_args to avoid Azure calls
         from az_rbac_watch.config.policy_model import PolicyModel, Subscription
 
         mock_build.return_value = PolicyModel(
@@ -1329,7 +1329,7 @@ class TestAutoDetectPolicy:
 
 
 class TestZeroArgsDefault:
-    """Tests pour le comportement zéro-args → audit par défaut."""
+    """Tests for zero-args behavior → audit by default."""
 
     @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
     @patch("az_rbac_watch.cli.scan_rbac")
@@ -1338,7 +1338,7 @@ class TestZeroArgsDefault:
     def test_no_args_runs_audit(
         self, mock_mgs: MagicMock, mock_subs: MagicMock, mock_scan: MagicMock, _mock_resolve: MagicMock
     ) -> None:
-        """Zéro arguments lance audit avec les règles de gouvernance par défaut."""
+        """Zero arguments runs audit with default governance rules."""
         mock_subs.return_value = [(VALID_SUB_ID, "Prod", VALID_TENANT_ID)]
         mock_mgs.return_value = []
         mock_scan.return_value = _mock_scan_result(with_assignments=True)
@@ -1353,7 +1353,7 @@ class TestZeroArgsDefault:
     def test_no_args_shows_next_steps(
         self, mock_mgs: MagicMock, mock_subs: MagicMock, mock_scan: MagicMock, _mock_resolve: MagicMock
     ) -> None:
-        """Zéro arguments affiche les prochaines étapes (discover + scan)."""
+        """Zero arguments shows next steps (discover + scan)."""
         mock_subs.return_value = [(VALID_SUB_ID, "Prod", VALID_TENANT_ID)]
         mock_mgs.return_value = []
         mock_scan.return_value = _mock_scan_result(with_assignments=True)
@@ -1362,7 +1362,7 @@ class TestZeroArgsDefault:
         assert "az-rbac-watch discover" in result.output
 
     def test_help_still_works(self) -> None:
-        """--help affiche l'aide même avec invoke_without_command."""
+        """--help displays help even with invoke_without_command."""
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
         assert "audit" in result.output
@@ -1371,10 +1371,10 @@ class TestZeroArgsDefault:
 
 
 class TestCredentialCheck:
-    """Tests pour la vérification des credentials Azure."""
+    """Tests for Azure credentials verification."""
 
     def test_credential_check_failure_exits_2(self) -> None:
-        """Credentials indisponibles → exit code 2 avec message actionnable."""
+        """Credentials unavailable → exit code 2 with actionable message."""
         with patch("az_rbac_watch.cli.check_credentials", return_value=False):
             result = runner.invoke(app, ["audit", "-s", VALID_SUB_ID])
             assert result.exit_code == 2
@@ -1382,7 +1382,7 @@ class TestCredentialCheck:
             assert "az login" in result.output
 
     def test_credential_check_skipped_on_dry_run(self) -> None:
-        """--dry-run ne vérifie pas les credentials."""
+        """--dry-run does not check credentials."""
         policy_path_content = yaml.dump({
             "version": "2.0",
             "tenant_id": VALID_TENANT_ID,
@@ -1400,7 +1400,7 @@ class TestCredentialCheck:
                 assert "no Azure credentials found" not in result.output
 
     def test_credential_check_skipped_on_validate(self) -> None:
-        """validate ne vérifie pas les credentials (offline)."""
+        """validate does not check credentials (offline)."""
         policy_path_content = yaml.dump({
             "version": "2.0",
             "tenant_id": VALID_TENANT_ID,
@@ -1441,12 +1441,12 @@ class TestCredentialCheck:
 
 
 class TestNextStepsFooter:
-    """Tests pour le footer 'Next steps' après les rapports."""
+    """Tests for the 'Next steps' footer after reports."""
 
     @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
     @patch("az_rbac_watch.cli.scan_rbac")
     def test_scan_compliant_shows_ci_hint(self, mock_scan: MagicMock, _mock_resolve: MagicMock, tmp_path: Path) -> None:
-        """scan compliant affiche le hint CI."""
+        """compliant scan shows CI hint."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
         mock_scan.return_value = _mock_scan_result(with_assignments=False)
         result = runner.invoke(app, ["scan", "--policy", str(policy_path)])
@@ -1459,8 +1459,8 @@ class TestNextStepsFooter:
     def test_scan_findings_shows_review_hint(
         self, mock_scan: MagicMock, _mock_resolve: MagicMock, tmp_path: Path
     ) -> None:
-        """scan avec findings affiche le hint de review."""
-        # Créer un assignment qui ne correspond PAS au baseline (principal_id différent)
+        """scan with findings shows review hint."""
+        # Create an assignment that does NOT match the baseline (different principal_id)
         drift_result = RbacScanResult(
             subscription_results=[
                 SubscriptionScanResult(
@@ -1492,7 +1492,7 @@ class TestNextStepsFooter:
     def test_audit_adhoc_shows_discover_hint(
         self, mock_mgs: MagicMock, mock_subs: MagicMock, mock_scan: MagicMock, _mock_resolve: MagicMock
     ) -> None:
-        """audit ad-hoc affiche les prochaines étapes discover + scan."""
+        """ad-hoc audit shows next steps discover + scan."""
         mock_subs.return_value = [(VALID_SUB_ID, "Prod", VALID_TENANT_ID)]
         mock_mgs.return_value = []
         mock_scan.return_value = _mock_scan_result(with_assignments=True)
@@ -1505,7 +1505,7 @@ class TestNextStepsFooter:
     def test_audit_with_policy_no_next_steps(
         self, mock_scan: MagicMock, _mock_resolve: MagicMock, tmp_path: Path
     ) -> None:
-        """audit avec --policy ne montre pas les next steps ad-hoc."""
+        """audit with --policy does not show ad-hoc next steps."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
         mock_scan.return_value = _mock_scan_result(with_assignments=True)
         result = runner.invoke(app, ["audit", "--policy", str(policy_path)])
@@ -1514,7 +1514,7 @@ class TestNextStepsFooter:
     @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
     @patch("az_rbac_watch.cli.scan_rbac")
     def test_scan_json_no_next_steps(self, mock_scan: MagicMock, _mock_resolve: MagicMock, tmp_path: Path) -> None:
-        """scan --format json ne montre pas de next steps."""
+        """scan --format json does not show next steps."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
         mock_scan.return_value = _mock_scan_result(with_assignments=False)
         result = runner.invoke(app, ["scan", "--policy", str(policy_path), "--format", "json"])

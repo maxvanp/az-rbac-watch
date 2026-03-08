@@ -1,9 +1,9 @@
-"""Chargement des paramètres utilisateur depuis fichier YAML et variables d'environnement.
+"""Load user settings from YAML file and environment variables.
 
-Ordre de priorité (du plus faible au plus fort) :
-1. Valeurs par défaut
-2. Fichier de configuration YAML
-3. Variables d'environnement AZ_RBAC_WATCH_*
+Priority order (lowest to highest):
+1. Default values
+2. YAML configuration file
+3. Environment variables AZ_RBAC_WATCH_*
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ __all__ = ["Settings", "load_settings"]
 
 
 class Settings(BaseModel):
-    """Paramètres utilisateur pour az-rbac-watch."""
+    """User settings for az-rbac-watch."""
 
     policy: str | None = None
     format: str = "console"
@@ -28,12 +28,12 @@ class Settings(BaseModel):
 
 
 def _default_config_path() -> Path:
-    """Chemin par défaut du fichier de configuration."""
+    """Default path to the configuration file."""
     return Path.home() / ".config" / "az-rbac-watch" / "config.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
-    """Charge un fichier YAML et retourne un dictionnaire (vide si le fichier n'existe pas)."""
+    """Load a YAML file and return a dictionary (empty if file does not exist)."""
     if not path.is_file():
         return {}
     with path.open(encoding="utf-8") as f:
@@ -44,7 +44,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def _apply_env_overrides(values: dict[str, Any]) -> dict[str, Any]:
-    """Applique les variables d'environnement comme surcharges."""
+    """Apply environment variables as overrides."""
     env_mapping: dict[str, str] = {
         "AZ_RBAC_WATCH_POLICY": "policy",
         "AZ_RBAC_WATCH_FORMAT": "format",
@@ -62,22 +62,22 @@ def _apply_env_overrides(values: dict[str, Any]) -> dict[str, Any]:
 
 
 def load_settings(config_path: Path | None = None) -> Settings:
-    """Charge les paramètres depuis le fichier de configuration et les variables d'environnement.
+    """Load settings from configuration file and environment variables.
 
-    Ordre de priorité :
-    1. Valeurs par défaut du modèle Settings
-    2. Fichier YAML (config_path explicite, ou $AZ_RBAC_WATCH_CONFIG, ou ~/.config/az-rbac-watch/config.yaml)
-    3. Variables d'environnement AZ_RBAC_WATCH_*
+    Priority order:
+    1. Default values from Settings model
+    2. YAML file (explicit config_path, or $AZ_RBAC_WATCH_CONFIG, or ~/.config/az-rbac-watch/config.yaml)
+    3. Environment variables AZ_RBAC_WATCH_*
     """
-    # Déterminer le chemin du fichier de configuration
+    # Determine the configuration file path
     if config_path is None:
         env_config = os.environ.get("AZ_RBAC_WATCH_CONFIG")
         config_path = Path(env_config) if env_config else _default_config_path()
 
-    # Charger les valeurs depuis le fichier YAML
+    # Load values from YAML file
     values = _load_yaml(config_path)
 
-    # Appliquer les surcharges des variables d'environnement
+    # Apply environment variable overrides
     values = _apply_env_overrides(values)
 
     return Settings(**values)

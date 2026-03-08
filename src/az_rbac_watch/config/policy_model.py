@@ -1,7 +1,7 @@
-"""Parsing et validation du policy model YAML.
+"""Parse and validate YAML policy model.
 
-Le policy model décrit les règles de conformité pour un tenant Azure :
-subscriptions, management groups, et les règles baseline/governance.
+The policy model describes compliance rules for an Azure tenant:
+subscriptions, management groups, and baseline/governance rules.
 """
 
 from __future__ import annotations
@@ -81,7 +81,7 @@ class RuleMatch(BaseModel):
 
     @model_validator(mode="after")
     def _warn_contradictory_operators(self) -> RuleMatch:
-        """Émet un warning si des opérateurs de match sont contradictoires."""
+        """Emit a warning if match operators are contradictory."""
         messages: list[str] = []
 
         # role ∈ role_not_in
@@ -190,10 +190,10 @@ def filter_scopes(
     exclude_subscriptions: list[str] | None = None,
     exclude_management_groups: list[str] | None = None,
 ) -> PolicyModel:
-    """Retourne une copie du PolicyModel sans les scopes exclus.
+    """Return a copy of PolicyModel without excluded scopes.
 
-    Filtre les subscriptions, management groups ET les rules ciblant ces scopes.
-    Comparaison case-insensitive sur les IDs.
+    Filter subscriptions, management groups AND rules targeting these scopes.
+    Case-insensitive comparison on IDs.
     """
     if not exclude_subscriptions and not exclude_management_groups:
         return model.model_copy()
@@ -230,21 +230,21 @@ def resolve_scopes(
     list_subs_fn: Callable[[], list[tuple[str, str, str]]] | None = None,
     list_mgs_fn: Callable[[], list[tuple[str, str]]] | None = None,
 ) -> PolicyModel:
-    """Résout les scopes selon le mode du policy model.
+    """Resolve scopes according to policy model mode.
 
-    Si scope=explicit → retourne le model inchangé.
-    Si scope=all → auto-discover les scopes accessibles, puis applique
-    les exclusions définies dans le YAML (exclude_subscriptions / exclude_management_groups).
+    If scope=explicit → return the model unchanged.
+    If scope=all → auto-discover accessible scopes, then apply
+    exclusions defined in YAML (exclude_subscriptions / exclude_management_groups).
 
     Args:
-        model: Le PolicyModel à résoudre.
-        list_subs_fn: Callable retournant list[tuple[str, str, str]] (sub_id, name, tenant_id).
-                      Par défaut : list_accessible_subscriptions.
-        list_mgs_fn: Callable retournant list[tuple[str, str]] (mg_id, name).
-                     Par défaut : list_accessible_management_groups.
+        model: The PolicyModel to resolve.
+        list_subs_fn: Callable returning list[tuple[str, str, str]] (sub_id, name, tenant_id).
+                      Default: list_accessible_subscriptions.
+        list_mgs_fn: Callable returning list[tuple[str, str]] (mg_id, name).
+                     Default: list_accessible_management_groups.
 
     Returns:
-        Un PolicyModel avec les scopes résolus (scope remis à "explicit").
+        A PolicyModel with resolved scopes (scope reset to "explicit").
     """
     if model.scope == "explicit":
         return model
@@ -289,29 +289,29 @@ def resolve_scopes(
 
 
 def load_policy_model(path: str | Path) -> PolicyModel:
-    """Charge et valide un policy model depuis un fichier YAML."""
+    """Load and validate a policy model from a YAML file."""
     path = Path(path)
     if not path.exists():
-        raise FileNotFoundError(f"Fichier policy model introuvable : {path}")
+        raise FileNotFoundError(f"Policy model file not found: {path}")
 
     raw = path.read_text(encoding="utf-8")
     try:
         data = yaml.safe_load(raw)
     except yaml.YAMLError as e:
-        raise ValueError(f"Erreur de parsing YAML : {e}") from e
+        raise ValueError(f"YAML parsing error: {e}") from e
 
     if not isinstance(data, dict):
-        raise ValueError("Le fichier YAML doit contenir un mapping à la racine")
+        raise ValueError("YAML file must contain a mapping at the root")
 
-    logger.info("Chargement du policy model depuis %s", path)
+    logger.info("Loading policy model from %s", path)
     return PolicyModel.model_validate(data)
 
 
-# ── Helpers pour la sérialisation YAML ────────────────────
+# ── Helpers for YAML serialization ────────────────────
 
 
 def _serialize_header(policy: PolicyModel) -> str:
-    """Sérialise le header du policy model (version, tenant, scopes) en YAML."""
+    """Serialize policy model header (version, tenant, scopes) to YAML."""
     header: dict[str, object] = {
         "version": policy.version,
         "tenant_id": str(policy.tenant_id),
@@ -331,7 +331,7 @@ def _serialize_header(policy: PolicyModel) -> str:
 
 
 def save_policy_model(policy: PolicyModel, path: str | Path) -> None:
-    """Sérialise un PolicyModel en fichier YAML, rules groupées par type (baseline puis governance)."""
+    """Serialize a PolicyModel to YAML file, rules grouped by type (baseline then governance)."""
     path = Path(path)
     parts: list[str] = [_serialize_header(policy)]
 
@@ -363,7 +363,7 @@ def save_policy_model(policy: PolicyModel, path: str | Path) -> None:
 
 
 def _serialize_rule(rule: Rule) -> str:
-    """Sérialise une Rule en fragment YAML indenté (list item)."""
+    """Serialize a Rule to indented YAML fragment (list item)."""
     data = rule.model_dump(exclude_defaults=True)
     # Always include type for clarity
     data["type"] = rule.type

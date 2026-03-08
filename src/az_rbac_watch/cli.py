@@ -102,7 +102,7 @@ def main(
 
     global console, _quiet_mode, _no_color_mode, _settings
 
-    # Charger les paramètres (fichier + env vars) et les utiliser comme fallback
+    # Load settings (file + env vars) and use as fallback
     _settings = load_settings()
 
     _quiet_mode = quiet or _settings.quiet
@@ -112,7 +112,7 @@ def main(
     elif _no_color_mode:
         console = Console(stderr=True, no_color=True)
 
-    # Zéro-args → lancer audit par défaut
+    # Zero-args → run audit by default
     if ctx.invoked_subcommand is None:
         ctx.invoke(audit)
 
@@ -146,7 +146,7 @@ def _setup_logging(verbose: bool) -> None:
 
 
 def _check_credentials_or_exit() -> None:
-    """Vérifie les credentials Azure avant les appels API."""
+    """Check Azure credentials before API calls."""
     if not check_credentials():
         console.print(
             "[bold red]Error[/bold red]: no Azure credentials found.\n\n"
@@ -200,7 +200,7 @@ def _run_scan(
 
 
 def _print_dry_run_plan(model: PolicyModel) -> None:
-    """Affiche le plan de dry-run : scopes et règles sans appeler Azure."""
+    """Print the dry-run plan: scopes and rules without calling Azure."""
     n_subs = len(model.subscriptions)
     n_mgs = len(model.management_groups)
     n_baseline = sum(1 for r in model.rules if r.type == "baseline")
@@ -273,9 +273,9 @@ def _exit_code(report: ComplianceReport) -> int:
 
 
 def _detect_policy_file() -> Path | None:
-    """Cherche un fichier de politique dans le répertoire courant.
+    """Search for a policy file in the current directory.
 
-    Ordre de priorité : policy.yaml, .az-rbac-watch.yaml, az-rbac-watch.yaml.
+    Priority order: policy.yaml, .az-rbac-watch.yaml, az-rbac-watch.yaml.
     """
     candidates = ("policy.yaml", ".az-rbac-watch.yaml", "az-rbac-watch.yaml")
     cwd = Path.cwd()
@@ -310,14 +310,14 @@ def _load_or_build_model(
             raise typer.Exit(code=2)
         return _load_policy_or_exit(policy)
 
-    # Auto-détection d'un fichier de politique dans le répertoire courant
+    # Auto-detect a policy file in the current directory
     if not subscription and not management_group:
         detected = _detect_policy_file()
         if detected is not None:
             console.print(f"[dim]Using policy file: ./{detected.name}[/dim]")
             return _load_policy_or_exit(detected)
 
-    # Mode ad-hoc
+    # Ad-hoc mode
     model = _build_model_from_args(tenant_id, subscription, management_group)
 
     if inject_default_governance and not any(r.type == "governance" for r in model.rules):
@@ -501,7 +501,7 @@ def scan(
     _debug_callback(debug)
     _setup_logging(verbose)
 
-    # Appliquer les valeurs par défaut depuis la configuration
+    # Apply default values from configuration
     if policy is None and _settings.policy is not None:
         policy = Path(_settings.policy)
     if fmt == "console" and _settings.format != "console":
@@ -550,7 +550,7 @@ def scan(
         )
         model = model.model_copy(update={"rules": [*list(model.rules), _sentinel]})
 
-    # Scanner RBAC
+    # RBAC scanner
     try:
         scan_result = _run_scan(model, fmt=fmt)
     except Exception as e:
@@ -576,7 +576,7 @@ def scan(
         html_mode="scan",
     )
 
-    # Next steps footer (console uniquement)
+    # Next steps footer (console only)
     if fmt == "console":
         code = _exit_code(report)
         if code == 1:
@@ -648,7 +648,7 @@ def audit(
     _debug_callback(debug)
     _setup_logging(verbose)
 
-    # Appliquer les valeurs par défaut depuis la configuration
+    # Apply default values from configuration
     if policy is None and _settings.policy is not None:
         policy = Path(_settings.policy)
     if fmt == "console" and _settings.format != "console":
@@ -681,7 +681,7 @@ def audit(
         console.print("[yellow]No governance rules in policy model — nothing to audit.[/yellow]")
         raise typer.Exit(code=0)
 
-    # Scanner RBAC
+    # RBAC scanner
     try:
         scan_result = _run_scan(model, fmt=fmt)
     except Exception as e:
@@ -707,7 +707,7 @@ def audit(
         html_mode="audit",
     )
 
-    # Next steps footer (console uniquement)
+    # Next steps footer (console only)
     if fmt == "console" and policy is None:
         console.print(
             "\n[dim]Next steps:\n"

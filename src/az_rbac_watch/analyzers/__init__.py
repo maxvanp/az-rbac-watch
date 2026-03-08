@@ -1,3 +1,3 @@
-"""Analyseurs de conformité et de drift."""
+"""Compliance and drift analyzers."""
 
 __all__: list[str] = []

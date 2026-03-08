@@ -1,4 +1,4 @@
-"""Tests pour le module de configuration settings."""
+"""Tests for the settings configuration module."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from az_rbac_watch.config.settings import Settings, load_settings
 
 
 class TestDefaults:
-    """Vérifie les valeurs par défaut."""
+    """Verify default values."""
 
     def test_defaults(self) -> None:
         settings = load_settings()
@@ -19,7 +19,7 @@ class TestDefaults:
 
 
 class TestLoadFromYaml:
-    """Vérifie le chargement depuis un fichier YAML."""
+    """Verify loading from a YAML file."""
 
     def test_load_from_yaml(self, tmp_path: Path) -> None:
         config = tmp_path / "config.yaml"
@@ -36,13 +36,13 @@ class TestLoadFromYaml:
         assert settings.no_color is True
 
     def test_missing_config_file(self) -> None:
-        """Fichier inexistant → valeurs par défaut uniquement."""
+        """Missing file → default values only."""
         settings = load_settings(config_path=Path("/nonexistent/config.yaml"))
         assert settings.format == "console"
         assert settings.policy is None
 
     def test_empty_yaml_file(self, tmp_path: Path) -> None:
-        """Fichier YAML vide → valeurs par défaut."""
+        """Empty YAML file → default values."""
         config = tmp_path / "config.yaml"
         config.write_text("")
         settings = load_settings(config_path=config)
@@ -50,7 +50,7 @@ class TestLoadFromYaml:
 
 
 class TestEnvVarOverride:
-    """Vérifie que les variables d'environnement surchargent les valeurs."""
+    """Verify that environment variables override values."""
 
     def test_env_var_override(self, monkeypatch: object) -> None:
         from pytest import MonkeyPatch
@@ -93,7 +93,7 @@ class TestEnvVarOverride:
         assert settings.quiet is False
 
     def test_env_var_overrides_file(self, tmp_path: Path, monkeypatch: object) -> None:
-        """La variable d'environnement a priorité sur le fichier YAML."""
+        """Environment variable has priority over YAML file."""
         from pytest import MonkeyPatch
 
         assert isinstance(monkeypatch, MonkeyPatch)
@@ -105,7 +105,7 @@ class TestEnvVarOverride:
 
 
 class TestConfigEnvVar:
-    """Vérifie le chargement via $AZ_RBAC_WATCH_CONFIG."""
+    """Verify loading via $AZ_RBAC_WATCH_CONFIG."""
 
     def test_config_env_var(self, tmp_path: Path, monkeypatch: object) -> None:
         from pytest import MonkeyPatch
@@ -119,7 +119,7 @@ class TestConfigEnvVar:
 
 
 class TestSettingsModel:
-    """Vérifie le modèle Pydantic Settings."""
+    """Verify the Pydantic Settings model."""
 
     def test_settings_model_creation(self) -> None:
         s = Settings(policy="/test.yaml", format="json", quiet=True, no_color=True)

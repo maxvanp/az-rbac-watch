@@ -1,4 +1,4 @@
-"""Tests unitaires pour le parsing et la validation du policy model."""
+"""Unit tests for policy model parsing and validation."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ VALID_SUB_ID = "22222222-2222-2222-2222-222222222222"
 
 
 def _minimal_policy(**overrides: object) -> dict:
-    """Retourne un dict minimal valide pour construire un PolicyModel."""
+    """Return a minimal valid dict for constructing a PolicyModel."""
     base: dict = {
         "version": "2.0",
         "tenant_id": VALID_TENANT_ID,
@@ -70,7 +70,7 @@ class TestManagementGroup:
             ManagementGroup(id="   ")
 
     def test_string_id_accepted(self):
-        """Les MG IDs ne sont pas des UUIDs — ce sont des strings arbitraires."""
+        """MG IDs are not UUIDs — they are arbitrary strings."""
         mg = ManagementGroup(id="my-custom-mg-id-123")
         assert mg.id == "my-custom-mg-id-123"
 
@@ -384,7 +384,7 @@ class TestPolicyModelRules:
                     {
                         "name": "only-perm-groups",
                         "type": "governance",
-                        "description": "Seuls les groupes GRP-PERM-* peuvent avoir des rôles",
+                        "description": "Only GRP-PERM-* groups can have roles",
                         "severity": "high",
                         "match": {
                             "principal_type": "Group",
@@ -446,7 +446,7 @@ class TestSavePolicyModel:
         out = tmp_path / "policy.yaml"
         save_policy_model(policy, out)
         raw = out.read_text(encoding="utf-8")
-        # UUID doit être une string, pas un objet UUID Python
+        # UUID should be a string, not a Python UUID object
         assert VALID_TENANT_ID in raw
         assert VALID_SUB_ID in raw
         assert "UUID" not in raw
@@ -511,7 +511,7 @@ class TestLoadPolicyModel:
         assert len(model.rules) == 1
 
     def test_load_file_not_found(self):
-        with pytest.raises(FileNotFoundError, match="introuvable"):
+        with pytest.raises(FileNotFoundError, match="not found"):
             load_policy_model("/nonexistent/path/policy.yaml")
 
     def test_load_invalid_yaml_syntax(self, tmp_path: Path):
@@ -533,10 +533,10 @@ class TestLoadPolicyModel:
             load_policy_model(incomplete)
 
     def test_load_example_policy_model(self):
-        """Vérifie que le fichier d'exemple dans examples/ est valide."""
+        """Verify that the example file in examples/ is valid."""
         example = Path(__file__).resolve().parent.parent / "examples" / "policy_model.yaml"
         if not example.exists():
-            pytest.skip("examples/policy_model.yaml non trouvé")
+            pytest.skip("examples/policy_model.yaml not found")
         model = load_policy_model(example)
         assert model.version == "2.0"
 
@@ -672,7 +672,7 @@ class TestResolveScopes:
         assert result.scope == "explicit"
 
     def test_all_discovers_scopes(self):
-        """scope=all → auto-discovery injecte les scopes."""
+        """scope=all → auto-discovery injects the scopes."""
         model = PolicyModel(**_minimal_policy(scope="all"))
 
         def mock_subs():

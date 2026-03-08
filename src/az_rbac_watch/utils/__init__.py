@@ -1,3 +1,3 @@
-"""Utilitaires partagés pour Azure Permissions Watch."""
+"""Shared utilities for Azure Permissions Watch."""
 
 __all__ = ["scope"]

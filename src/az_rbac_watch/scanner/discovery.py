@@ -1,8 +1,8 @@
-"""Auto-discovery : génère un PolicyModel draft depuis un scan RBAC.
+"""Auto-discovery: generates a draft PolicyModel from an RBAC scan.
 
-Scanne les assignations RBAC existantes et résout les noms de principals
-via Microsoft Graph pour produire un YAML lisible que l'utilisateur revoit.
-Les assignations sont converties en baseline rules.
+Scans existing RBAC assignments and resolves principal names
+via Microsoft Graph to produce readable YAML for user review.
+Assignments are converted to baseline rules.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Mapping odata.type → principal_type lisible
+# Mapping odata.type → readable principal_type
 _ODATA_TYPE_MAP: dict[str, str] = {
     "#microsoft.graph.user": "User",
     "#microsoft.graph.group": "Group",
@@ -54,33 +54,33 @@ def discover_policy(
     management_groups: list[ManagementGroup] | None = None,
     credential: TokenCredential | None = None,
 ) -> PolicyModel:
-    """Génère un PolicyModel draft depuis un scan RBAC existant.
+    """Generates a draft PolicyModel from an existing RBAC scan.
 
     Args:
-        scan_result: Résultat d'un scan RBAC.
-        tenant_id: Identifiant du tenant Azure.
-        subscriptions: Subscriptions scannées (pour les inclure dans le YAML).
-        management_groups: Management groups scannés.
-        credential: Credential pour la résolution Graph (optionnel).
+        scan_result: Result of an RBAC scan.
+        tenant_id: Azure tenant identifier.
+        subscriptions: Scanned subscriptions (to include in YAML).
+        management_groups: Scanned management groups.
+        credential: Credential for Graph resolution (optional).
 
     Returns:
-        Un PolicyModel v2.0 avec des baseline rules pour chaque assignation découverte.
+        A PolicyModel v2.0 with baseline rules for each discovered assignment.
     """
     assignments = scan_result.all_assignments
 
-    # 1. Réutiliser les noms déjà résolus dans les assignments (évite un appel Graph redondant)
+    # 1. Reuse names already resolved in assignments (avoids redundant Graph call)
     names: dict[str, tuple[str, str]] = {}
     for a in assignments:
         if a.principal_display_name and a.principal_id and a.principal_id not in names:
             names[a.principal_id] = (a.principal_display_name, str(a.principal_type))
 
-    # 2. Résoudre uniquement les principals non encore résolus
+    # 2. Resolve only principals not yet resolved
     unresolved_ids = list({a.principal_id for a in assignments if a.principal_id and a.principal_id not in names})
     if unresolved_ids:
         fresh = resolve_principal_names(unresolved_ids, credential=credential)
         names.update(fresh)
 
-    # 3. Construire les baseline rules (dédupliquées par clé)
+    # 3. Build baseline rules (deduplicated by key)
     seen_keys: set[tuple[str, str, str]] = set()
     baseline_rules: list[Rule] = []
     name_counter: dict[str, int] = {}
@@ -94,7 +94,7 @@ def discover_policy(
             continue
         seen_keys.add(key)
 
-        # Résolution du nom
+        # Name resolution
         resolved = names.get(a.principal_id)
         display_name = resolved[0] if resolved else (a.principal_display_name or a.principal_id)
 
@@ -117,7 +117,7 @@ def discover_policy(
             )
         )
 
-    # 4. Trier pour la lisibilité
+    # 4. Sort for readability
     baseline_rules.sort(key=lambda r: (
         (r.match.scope or "").lower(),
         (r.match.role or "").lower(),

@@ -20,7 +20,7 @@ SUB_2 = "22222222-2222-2222-2222-222222222222"
 
 
 def _empty_report() -> ComplianceReport:
-    """Rapport conforme sans findings."""
+    """Compliant report without findings."""
     return ComplianceReport(
         policy_version="2.0",
         tenant_id="aaaa-bbbb-cccc",
@@ -31,12 +31,12 @@ def _empty_report() -> ComplianceReport:
 
 
 def _report_with_findings() -> ComplianceReport:
-    """Rapport avec des findings de plusieurs sévérités dans un seul scope."""
+    """Report with findings of multiple severities in a single scope."""
     findings = [
         ComplianceFinding(
             rule_id=OUT_OF_BASELINE,
             severity=Severity.HIGH,
-            message="Assignation non autorisée",
+            message="Unauthorized assignment",
             principal_id="user-1111",
             principal_type="User",
             role_name="Contributor",
@@ -45,7 +45,7 @@ def _report_with_findings() -> ComplianceReport:
         ComplianceFinding(
             rule_id="no-direct-users",
             severity=Severity.MEDIUM,
-            message="Violation de règle governance",
+            message="Governance rule violation",
             principal_id="group-2222",
             principal_type="Group",
             role_name="Reader",
@@ -68,12 +68,12 @@ def _report_with_findings() -> ComplianceReport:
 
 
 def _report_multi_scope() -> ComplianceReport:
-    """Rapport avec findings sur 2 subscriptions différentes."""
+    """Report with findings on 2 different subscriptions."""
     findings = [
         ComplianceFinding(
             rule_id=OUT_OF_BASELINE,
             severity=Severity.HIGH,
-            message="Assignation non autorisée",
+            message="Unauthorized assignment",
             principal_id="user-1111",
             principal_type="User",
             role_name="Owner",
@@ -82,7 +82,7 @@ def _report_multi_scope() -> ComplianceReport:
         ComplianceFinding(
             rule_id=OUT_OF_BASELINE,
             severity=Severity.HIGH,
-            message="Assignation non autorisée",
+            message="Unauthorized assignment",
             principal_id="user-3333",
             principal_type="User",
             role_name="Contributor",
@@ -91,7 +91,7 @@ def _report_multi_scope() -> ComplianceReport:
         ComplianceFinding(
             rule_id="no-direct-users",
             severity=Severity.MEDIUM,
-            message="Violation de règle governance",
+            message="Governance rule violation",
             principal_id="group-4444",
             principal_type="Group",
             role_name="Reader",
@@ -114,18 +114,18 @@ def _report_multi_scope() -> ComplianceReport:
 
 
 def _report_with_errors() -> ComplianceReport:
-    """Rapport avec des erreurs de scan."""
+    """Report with scan errors."""
     return ComplianceReport(
         policy_version="2.0",
         tenant_id="aaaa-bbbb-cccc",
         scan_timestamp=datetime(2026, 1, 15, 10, 30, 0, tzinfo=UTC),
         findings=[],
         summary=ComplianceSummary(total_assignments_checked=5),
-        scan_errors=["Subscription sub-x : accès refusé", "Timeout sur sub-y"],
+        scan_errors=["Subscription sub-x: access denied", "Timeout on sub-y"],
     )
 
 
-# ── Tests rapport vide ─────────────────────────────────────
+# ── Empty report tests ─────────────────────────────────────
 
 
 class TestEmptyReport:
@@ -240,14 +240,14 @@ class TestReportWithFindings:
         assert "<tbody>" in html
 
     def test_no_toc_single_scope(self, tmp_path: Path) -> None:
-        """Pas de sommaire quand tous les findings sont dans le même scope."""
+        """No table of contents when all findings are in the same scope."""
         out = tmp_path / "report.html"
         generate_html_report(_report_with_findings(), out)
         html = out.read_text(encoding="utf-8")
         assert "Findings by scope" not in html
 
     def test_scope_group_header(self, tmp_path: Path) -> None:
-        """Le header de groupe scope est présent avec le count badge."""
+        """Scope group header is present with count badge."""
         out = tmp_path / "report.html"
         generate_html_report(_report_with_findings(), out)
         html = out.read_text(encoding="utf-8")
@@ -255,7 +255,7 @@ class TestReportWithFindings:
         assert "2 finding(s)" in html
 
     def test_scope_names_in_header(self, tmp_path: Path) -> None:
-        """Le nom de la subscription apparaît si scope_names est fourni."""
+        """Subscription name appears if scope_names is provided."""
         out = tmp_path / "report.html"
         generate_html_report(
             _report_with_findings(),
@@ -278,12 +278,12 @@ class TestReportDisplayName:
         assert "user-1111" in html
 
 
-# ── Tests rapport multi-scope (TOC) ────────────────────────
+# ── Multi-scope report tests (TOC) ─────────────────────────
 
 
 class TestReportMultiScope:
     def test_toc_present(self, tmp_path: Path) -> None:
-        """Le sommaire apparaît quand il y a 2+ scope groups."""
+        """Table of contents appears when there are 2+ scope groups."""
         out = tmp_path / "report.html"
         generate_html_report(_report_multi_scope(), out)
         html = out.read_text(encoding="utf-8")
@@ -291,7 +291,7 @@ class TestReportMultiScope:
         assert 'id="toc"' in html
 
     def test_toc_links(self, tmp_path: Path) -> None:
-        """Le TOC contient des liens vers les sections scope."""
+        """TOC contains links to scope sections."""
         out = tmp_path / "report.html"
         generate_html_report(_report_multi_scope(), out)
         html = out.read_text(encoding="utf-8")
@@ -299,7 +299,7 @@ class TestReportMultiScope:
         assert f"scope-{SUB_1.replace('-', '-')}" in html.replace("-", "-")
 
     def test_toc_counts(self, tmp_path: Path) -> None:
-        """Le TOC affiche les compteurs par scope."""
+        """TOC displays counters by scope."""
         out = tmp_path / "report.html"
         generate_html_report(_report_multi_scope(), out)
         html = out.read_text(encoding="utf-8")
@@ -309,7 +309,7 @@ class TestReportMultiScope:
         assert "Violation" in html or "violation" in html
 
     def test_back_to_top_links(self, tmp_path: Path) -> None:
-        """Les liens 'Sommaire' apparaissent dans chaque section scope."""
+        """'Summary' links appear in each scope section."""
         out = tmp_path / "report.html"
         generate_html_report(_report_multi_scope(), out)
         html = out.read_text(encoding="utf-8")
@@ -317,14 +317,14 @@ class TestReportMultiScope:
         assert "Summary" in html
 
     def test_two_scope_sections(self, tmp_path: Path) -> None:
-        """Deux sections scope distinctes sont générées."""
+        """Two distinct scope sections are generated."""
         out = tmp_path / "report.html"
         generate_html_report(_report_multi_scope(), out)
         html = out.read_text(encoding="utf-8")
         assert html.count("<tbody>") == 3  # 1 TOC + 2 scope tables
 
     def test_scope_names_in_toc(self, tmp_path: Path) -> None:
-        """Les noms de subscription apparaissent dans le TOC."""
+        """Subscription names appear in the TOC."""
         out = tmp_path / "report.html"
         generate_html_report(
             _report_multi_scope(),
@@ -336,7 +336,7 @@ class TestReportMultiScope:
         assert "Development" in html
 
     def test_findings_grouped_correctly(self, tmp_path: Path) -> None:
-        """Les findings de chaque scope sont dans la bonne section."""
+        """Findings for each scope are in the correct section."""
         out = tmp_path / "report.html"
         generate_html_report(_report_multi_scope(), out)
         html = out.read_text(encoding="utf-8")
@@ -349,7 +349,7 @@ class TestReportMultiScope:
         assert sub2_section_start < group_4444_pos
 
 
-# ── Tests erreurs de scan ──────────────────────────────────
+# ── Scan error tests ─────────────────────────────────────
 
 
 class TestReportWithErrors:
@@ -363,7 +363,7 @@ class TestReportWithErrors:
         out = tmp_path / "report.html"
         generate_html_report(_report_with_errors(), out)
         html = out.read_text(encoding="utf-8")
-        assert "accès refusé" in html or "accès refusé" in html
+        assert "access denied" in html or "access denied" in html
         assert "Timeout" in html
 
     def test_no_error_section_when_empty(self, tmp_path: Path) -> None:
@@ -373,12 +373,12 @@ class TestReportWithErrors:
         assert "Scan errors" not in html
 
 
-# ── Tests sécurité ─────────────────────────────────────────
+# ── Security tests ──────────────────────────────────────────
 
 
 class TestHtmlEscaping:
     def test_xss_in_principal_id(self, tmp_path: Path) -> None:
-        """Vérifie que les valeurs sont échappées (pas de XSS)."""
+        """Verify that values are escaped (no XSS)."""
         report = _empty_report()
         report.findings = [
             ComplianceFinding(

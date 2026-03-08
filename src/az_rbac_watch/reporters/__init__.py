@@ -1,3 +1,3 @@
-"""Reporters HTML et console pour les résultats d'analyse."""
+"""HTML and console reporters for analysis results."""
 
 __all__: list[str] = []

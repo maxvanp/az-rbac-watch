@@ -1,6 +1,6 @@
-"""Tests unitaires pour le moteur de conformité (baseline/governance rules).
+"""Unit tests for the compliance engine (baseline/governance rules).
 
-Tous les tests utilisent des données mockées — aucun credential Azure requis.
+All tests use mocked data — no Azure credentials required.
 """
 
 from __future__ import annotations
@@ -55,11 +55,11 @@ class TestComplianceFinding:
         finding = ComplianceFinding(
             rule_id="TEST_RULE",
             severity=Severity.MEDIUM,
-            message="Un problème détecté",
+            message="A problem was detected",
         )
         assert finding.rule_id == "TEST_RULE"
         assert finding.severity == Severity.MEDIUM
-        assert finding.message == "Un problème détecté"
+        assert finding.message == "A problem was detected"
 
     def test_defaults(self):
         finding = ComplianceFinding(
