@@ -1,0 +1,22 @@
+# Validate RBAC policy YAML files on pull requests.
+# This workflow runs offline validation only — no Azure credentials are needed.
+# Copy this file to .github/workflows/ in your repository to enable PR checks.
+
+name: RBAC Policy Validation
+
+on:
+  pull_request:
+    paths:
+      - "**/policy*.yaml"
+      - "**/policy*.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxvanp/az-rbac-watch@v0.5.0
+        with:
+          mode: validate
+          policy: policy.yaml
