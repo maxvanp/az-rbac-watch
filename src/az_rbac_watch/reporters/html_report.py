@@ -438,6 +438,87 @@ def _truncate_scope(scope: str, max_segments: int = 2) -> str:
     return f".../{tail}"
 
 
+def _compute_compliance_score(total_assignments: int, total_findings: int) -> int:
+    """Compute compliance as a percentage: (total - findings) / total * 100.
+
+    Returns 100 if no assignments. Clamps to 0 if findings > assignments.
+    """
+    if total_assignments == 0:
+        return 100
+    score = (total_assignments - total_findings) / total_assignments * 100
+    return max(0, round(score))
+
+
+def _score_color(score: int) -> str:
+    """Return a CSS color for the compliance score."""
+    if score >= 90:
+        return "#27ae60"
+    if score >= 70:
+        return "#f39c12"
+    if score >= 50:
+        return "#e67e22"
+    return "#e74c3c"
+
+
+def _build_executive_summary(
+    total_assignments: int,
+    scope_count: int,
+    findings_by_severity: dict[str, int],
+) -> str:
+    """Build a 1-2 sentence executive summary for the HTML report."""
+    scope_word = "scope" if scope_count == 1 else "scopes"
+    parts = [f"{total_assignments} assignments scanned across {scope_count} {scope_word}."]
+
+    total_findings = sum(findings_by_severity.values())
+    if total_findings == 0:
+        parts.append("No findings detected.")
+    else:
+        finding_word = "finding" if total_findings == 1 else "findings"
+        severity_order = ["critical", "high", "medium", "low", "info"]
+        breakdown = [
+            f"{count} {sev}"
+            for sev in severity_order
+            if (count := findings_by_severity.get(sev, 0)) > 0
+        ]
+        parts.append(f"{total_findings} {finding_word} detected: {', '.join(breakdown)}.")
+
+    return " ".join(parts)
+
+
+@dataclass(frozen=True)
+class DonutArc:
+    """One arc segment of the severity donut chart."""
+
+    severity: str
+    count: int
+    percentage: float
+    offset: float
+    color: str
+
+
+_SEVERITY_SORT = ["critical", "high", "medium", "low", "info"]
+
+
+def _compute_donut_arcs(findings_by_severity: dict[str, int]) -> list[DonutArc]:
+    """Compute SVG donut arc segments from severity counts."""
+    total = sum(findings_by_severity.values())
+    if total == 0:
+        return []
+
+    arcs: list[DonutArc] = []
+    offset = 0.0
+    for sev in _SEVERITY_SORT:
+        count = findings_by_severity.get(sev, 0)
+        if count == 0:
+            continue
+        pct = count / total * 100
+        color = _SEVERITY_COLOR.get(Severity(sev), "#6c757d")
+        arcs.append(DonutArc(severity=sev, count=count, percentage=pct, offset=offset, color=color))
+        offset += pct
+
+    return arcs
+
+
 # ── Public API ──────────────────────────────────────────────
 
 
