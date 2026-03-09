@@ -6,7 +6,7 @@ annotated-types==0.7.0
 anyio==4.12.1
 attrs==25.4.0
 azure-common==1.1.28
-azure-core==1.38.1
+azure-core==1.38.2
 azure-identity==1.25.2
 azure-mgmt-authorization==4.0.0
 azure-mgmt-core==1.6.0
