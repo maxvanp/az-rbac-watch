@@ -1,0 +1,94 @@
+# Weekly RBAC Snapshot Comparison Workflow
+#
+# Prerequisites:
+#   1. An Azure AD app registration with federated credentials for GitHub Actions OIDC.
+#   2. The app must have Reader access on the subscriptions/management groups to scan.
+#   3. Microsoft Graph API permissions: User.Read.All, Group.Read.All (for principal
+#      name resolution). These should be Application permissions with admin consent.
+#   4. Repository secrets configured:
+#        - AZURE_CLIENT_ID:       App registration client ID
+#        - AZURE_TENANT_ID:       Azure AD tenant ID
+#        - AZURE_SUBSCRIPTION_ID: Default subscription ID for login
+#   5. A policy.yaml file committed to the repository root (or adjust the path below).
+#
+# How it works:
+#   - Every Monday at 07:00 UTC (or on manual trigger), the workflow takes a fresh
+#     RBAC snapshot, compares it against the previous week's snapshot, and uploads
+#     both the snapshot and the diff report as artifacts.
+#   - On the first run there is no previous snapshot, so the diff step is skipped.
+
+name: Weekly RBAC Snapshot Diff
+
+on:
+  schedule:
+    - cron: "0 7 * * 1" # Every Monday at 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  snapshot-diff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install az-rbac-watch
+        run: pip install az-rbac-watch
+
+      - name: Download previous snapshot
+        id: download
+        uses: actions/download-artifact@v4
+        with:
+          name: rbac-latest-snapshot
+          path: previous/
+        continue-on-error: true
+
+      - name: Take RBAC snapshot
+        uses: maxvanp/az-rbac-watch@v0.5.0
+        with:
+          mode: snapshot
+          policy: policy.yaml
+          output: current-snapshot.json
+
+      - name: Diff snapshots
+        if: steps.download.outcome == 'success'
+        uses: maxvanp/az-rbac-watch@v0.5.0
+        with:
+          mode: diff
+          old-snapshot: previous/current-snapshot.json
+          new-snapshot: current-snapshot.json
+          format: json
+          output: diff-report.json
+
+      - name: Upload current snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbac-latest-snapshot
+          path: current-snapshot.json
+          retention-days: 90
+          overwrite: true
+
+      - name: Upload diff report
+        if: steps.download.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbac-diff-report-${{ github.run_id }}
+          path: diff-report.json
+          retention-days: 90

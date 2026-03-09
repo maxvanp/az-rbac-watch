@@ -268,6 +268,64 @@ fi
 **Full traceback**
 - Use `--debug` to see the complete Python traceback on any error
 
+## GitHub Actions
+
+Use the composite action to integrate az-rbac-watch into your CI/CD pipelines.
+
+### Basic usage
+
+```yaml
+- uses: maxvanp/az-rbac-watch@v0.5.0
+  with:
+    mode: scan
+    policy: policy.yaml
+    format: json
+    output: report.json
+```
+
+### Available modes
+
+| Mode | Description | Azure auth required |
+|------|-------------|---------------------|
+| `scan` | Detect RBAC drift against baseline rules | Yes |
+| `audit` | Check governance guardrails | Yes |
+| `validate` | Validate policy YAML syntax (offline) | No |
+| `snapshot` | Capture RBAC snapshot | Yes |
+| `diff` | Compare two snapshots | No |
+
+### Example workflows
+
+Ready-to-use workflow templates are available in [`examples/workflows/`](examples/workflows/):
+
+- **[`rbac-scheduled-scan.yml`](examples/workflows/rbac-scheduled-scan.yml)** — Daily scan + audit with artifact reports
+- **[`rbac-pr-check.yml`](examples/workflows/rbac-pr-check.yml)** — Validate policy files on pull requests
+- **[`rbac-snapshot-diff.yml`](examples/workflows/rbac-snapshot-diff.yml)** — Weekly snapshot comparison with change detection
+
+Copy the desired workflow to `.github/workflows/` in your repository and configure the required secrets.
+
+### Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `mode` | yes | — | Command: `scan`, `audit`, `validate`, `snapshot`, `diff` |
+| `policy` | no | — | Path to policy YAML file |
+| `tenant-id` | no | — | Azure tenant ID |
+| `subscriptions` | no | — | Subscription IDs (comma-separated) |
+| `management-groups` | no | — | Management group IDs (comma-separated) |
+| `format` | no | `console` | Output format: `console` or `json` |
+| `output` | no | — | Output file path |
+| `old-snapshot` | no | — | Old snapshot path (diff mode) |
+| `new-snapshot` | no | — | New snapshot path (diff mode) |
+| `python-version` | no | `3.12` | Python version |
+| `extra-args` | no | — | Additional CLI arguments |
+
+### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `exit-code` | `0` = compliant, `1` = findings/changes, `2` = error |
+| `report-path` | Path to generated report (if `output` is set) |
+
 ## Rule match operators
 
 All comparisons are case-insensitive. Conditions are combined with AND logic.

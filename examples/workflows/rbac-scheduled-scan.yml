@@ -1,0 +1,74 @@
+# Azure RBAC Scheduled Scan
+#
+# This workflow runs a daily RBAC compliance scan and audit against your
+# declared policy model, uploading reports as build artifacts.
+#
+# Prerequisites:
+#   1. Register an Azure AD application with federated credentials for
+#      GitHub Actions OIDC (no client secret needed).
+#   2. Grant the application the "Reader" role on every subscription and
+#      management group you want to scan.
+#   3. For principal name resolution, grant the application the Microsoft
+#      Graph "User.Read.All" and "Group.Read.All" application permissions.
+#   4. Configure the following repository secrets:
+#        AZURE_CLIENT_ID       - Application (client) ID
+#        AZURE_TENANT_ID       - Azure AD tenant ID
+#        AZURE_SUBSCRIPTION_ID - Default subscription ID
+#   5. Place your policy file at the repository root as "policy.yaml"
+#      (or adjust the "policy" input below).
+#
+# Copy this file to .github/workflows/ in your repository to enable it.
+
+name: RBAC Scheduled Scan
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # Daily at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  rbac-scan:
+    name: RBAC Compliance Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run RBAC drift scan
+        uses: maxvanp/az-rbac-watch@v0.5.0
+        with:
+          mode: scan
+          policy: policy.yaml
+          format: json
+          output: drift-report.json
+
+      - name: Run RBAC audit
+        if: always()
+        uses: maxvanp/az-rbac-watch@v0.5.0
+        with:
+          mode: audit
+          policy: policy.yaml
+          format: json
+          output: audit-report.json
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbac-reports
+          path: |
+            drift-report.json
+            audit-report.json
+          retention-days: 90
