@@ -87,6 +87,7 @@ class TestSnapshotModel:
 
     def test_snapshot_file_not_found(self, tmp_path):
         import pytest
+
         with pytest.raises(FileNotFoundError):
             load_snapshot(tmp_path / "nonexistent.json")
 

@@ -118,11 +118,13 @@ def discover_policy(
         )
 
     # 4. Sort for readability
-    baseline_rules.sort(key=lambda r: (
-        (r.match.scope or "").lower(),
-        (r.match.role or "").lower(),
-        r.name.lower(),
-    ))
+    baseline_rules.sort(
+        key=lambda r: (
+            (r.match.scope or "").lower(),
+            (r.match.role or "").lower(),
+            r.name.lower(),
+        )
+    )
 
     return PolicyModel(
         version="2.0",

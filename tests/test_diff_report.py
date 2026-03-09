@@ -63,9 +63,11 @@ class TestDiffConsoleReport:
         assert "Removed" in output or "removed" in output
 
     def test_modified_shown(self) -> None:
-        result = DiffResult(modified=[
-            DiffChange(assignment_id="a-1", field="role_name", old_value="Reader", new_value="Contributor"),
-        ])
+        result = DiffResult(
+            modified=[
+                DiffChange(assignment_id="a-1", field="role_name", old_value="Reader", new_value="Contributor"),
+            ]
+        )
         output = format_diff_console(result)
         assert "Reader" in output
         assert "Contributor" in output

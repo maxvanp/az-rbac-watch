@@ -457,9 +457,7 @@ class RbacScanner:
 
         # The subscription_id to create the MG client is not used by list_for_scope()
         dummy_sub_id = (
-            str(policy.subscriptions[0].id)
-            if policy.subscriptions
-            else "00000000-0000-0000-0000-000000000000"
+            str(policy.subscriptions[0].id) if policy.subscriptions else "00000000-0000-0000-0000-000000000000"
         )
 
         # Collect tasks in order (MG first, then subscriptions)
@@ -522,16 +520,22 @@ class RbacScanner:
             error_msg = f"Failed to create client for {scope_type} {scope_id}: {exc}"
             logger.error(error_msg)
             if scope_type == "mg":
-                return ("mg", ManagementGroupScanResult(
-                    management_group_id=scope_id,
-                    management_group_name=scope_name,
+                return (
+                    "mg",
+                    ManagementGroupScanResult(
+                        management_group_id=scope_id,
+                        management_group_name=scope_name,
+                        errors=[error_msg],
+                    ),
+                )
+            return (
+                "sub",
+                SubscriptionScanResult(
+                    subscription_id=scope_id,
+                    subscription_name=scope_name,
                     errors=[error_msg],
-                ))
-            return ("sub", SubscriptionScanResult(
-                subscription_id=scope_id,
-                subscription_name=scope_name,
-                errors=[error_msg],
-            ))
+                ),
+            )
 
         if scope_type == "mg":
             return ("mg", scan_management_group(client, scope_id, scope_name))

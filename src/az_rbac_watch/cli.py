@@ -209,8 +209,7 @@ def _print_dry_run_plan(model: PolicyModel) -> None:
     output_console = Console(no_color=_no_color_mode)
     output_console.print()
     output_console.print(
-        f"[bold cyan]Dry run[/bold cyan] — would scan {n_subs} subscription(s), "
-        f"{n_mgs} management group(s)"
+        f"[bold cyan]Dry run[/bold cyan] — would scan {n_subs} subscription(s), {n_mgs} management group(s)"
     )
     for sub in model.subscriptions:
         label = sub.name or str(sub.id)
@@ -304,8 +303,7 @@ def _load_or_build_model(
     if policy is not None:
         if subscription or management_group:
             console.print(
-                "[bold red]Error[/bold red]: --policy and --subscription/--management-group "
-                "are mutually exclusive."
+                "[bold red]Error[/bold red]: --policy and --subscription/--management-group are mutually exclusive."
             )
             raise typer.Exit(code=2)
         return _load_policy_or_exit(policy)
@@ -593,14 +591,12 @@ def scan(
     n_baseline = sum(1 for r in model.rules if r.type == "baseline")
     if n_baseline == 0 and policy is not None:
         console.print(
-            "No baseline rules in policy model. To create a baseline:\n"
-            "  az-rbac-watch discover -o policy.yaml"
+            "No baseline rules in policy model. To create a baseline:\n  az-rbac-watch discover -o policy.yaml"
         )
         raise typer.Exit(code=0)
     if n_baseline == 0 and policy is None:
         console.print(
-            "[bold yellow]Ad-hoc mode: no baseline rules"
-            " — every assignment will be reported as drift.[/bold yellow]"
+            "[bold yellow]Ad-hoc mode: no baseline rules — every assignment will be reported as drift.[/bold yellow]"
         )
         # Inject a dummy baseline that matches nothing → all assignments become drift
         from az_rbac_watch.config.policy_model import Rule, RuleMatch
@@ -644,10 +640,7 @@ def scan(
         if code == 1:
             console.print("\n[dim]Next steps:\n  Review findings and update policy.yaml[/dim]")
         elif code == 0:
-            console.print(
-                "\n[dim]All clear! Integrate in CI:\n"
-                "  az-rbac-watch scan -p policy.yaml --format json[/dim]"
-            )
+            console.print("\n[dim]All clear! Integrate in CI:\n  az-rbac-watch scan -p policy.yaml --format json[/dim]")
 
     raise typer.Exit(code=_exit_code(report))
 
@@ -931,8 +924,7 @@ def snapshot(
     if policy is not None:
         if subscription or management_group:
             console.print(
-                "[bold red]Error[/bold red]: --policy and --subscription/--management-group "
-                "are mutually exclusive."
+                "[bold red]Error[/bold red]: --policy and --subscription/--management-group are mutually exclusive."
             )
             raise typer.Exit(code=2)
         model = _load_policy_or_exit(policy)

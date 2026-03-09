@@ -27,6 +27,8 @@ def _mock_check_credentials() -> object:
     """Mock check_credentials for all CLI tests — avoids actual Azure calls."""
     with patch("az_rbac_watch.cli.check_credentials", return_value=True):
         yield
+
+
 VALID_SUB_ID = "22222222-2222-2222-2222-222222222222"
 VALID_SUB_ID_2 = "33333333-3333-3333-3333-333333333333"
 
@@ -60,7 +62,7 @@ def _write_policy(
 
     rules: list[dict] = []
     if with_baseline_rules:
-        for sid in (sub_ids or [VALID_SUB_ID]):
+        for sid in sub_ids or [VALID_SUB_ID]:
             rules.append(
                 {
                     "name": f"allow-reader-{sid[:8]}",
@@ -895,9 +897,7 @@ class TestAdHocScan:
     @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
     @patch("az_rbac_watch.cli.scan_rbac")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    def test_scan_adhoc_with_subscription(
-        self, mock_list_subs, mock_scan, _mock_resolve
-    ) -> None:
+    def test_scan_adhoc_with_subscription(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """scan -s <id> without --policy builds model on-the-fly."""
         mock_list_subs.return_value = [
             (VALID_SUB_ID, "Prod", VALID_TENANT_ID),
@@ -914,9 +914,7 @@ class TestAdHocScan:
     @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
     @patch("az_rbac_watch.cli.scan_rbac")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    def test_scan_adhoc_shows_hint(
-        self, mock_list_subs, mock_scan, _mock_resolve
-    ) -> None:
+    def test_scan_adhoc_shows_hint(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc scan prints hint about no baseline rules."""
         mock_list_subs.return_value = [
             (VALID_SUB_ID, "Prod", VALID_TENANT_ID),
@@ -937,9 +935,7 @@ class TestAdHocScan:
     @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
     @patch("az_rbac_watch.cli.scan_rbac")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    def test_scan_adhoc_json_format(
-        self, mock_list_subs, mock_scan, _mock_resolve
-    ) -> None:
+    def test_scan_adhoc_json_format(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc scan works with --format json."""
         import json
 
@@ -962,9 +958,7 @@ class TestAdHocAudit:
     @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
     @patch("az_rbac_watch.cli.scan_rbac")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    def test_audit_adhoc_uses_default_rules(
-        self, mock_list_subs, mock_scan, _mock_resolve
-    ) -> None:
+    def test_audit_adhoc_uses_default_rules(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """audit -s <id> without --policy injects default governance rules."""
         mock_list_subs.return_value = [
             (VALID_SUB_ID, "Prod", VALID_TENANT_ID),
@@ -982,9 +976,7 @@ class TestAdHocAudit:
     @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
     @patch("az_rbac_watch.cli.scan_rbac")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    def test_audit_adhoc_prints_default_rules_hint(
-        self, mock_list_subs, mock_scan, _mock_resolve
-    ) -> None:
+    def test_audit_adhoc_prints_default_rules_hint(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc audit prints hint about default rules."""
         mock_list_subs.return_value = [
             (VALID_SUB_ID, "Prod", VALID_TENANT_ID),
@@ -1003,9 +995,7 @@ class TestAdHocAudit:
     @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
     @patch("az_rbac_watch.cli.scan_rbac")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    def test_audit_adhoc_detects_violations(
-        self, mock_list_subs, mock_scan, _mock_resolve
-    ) -> None:
+    def test_audit_adhoc_detects_violations(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc audit with User principal → violation (no-direct-users rule)."""
         mock_list_subs.return_value = [
             (VALID_SUB_ID, "Prod", VALID_TENANT_ID),
@@ -1020,9 +1010,7 @@ class TestAdHocAudit:
     @patch("az_rbac_watch.cli.scan_rbac")
     @patch("az_rbac_watch.cli.list_accessible_management_groups")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    def test_audit_adhoc_auto_discovery(
-        self, mock_list_subs, mock_list_mgs, mock_scan, _mock_resolve
-    ) -> None:
+    def test_audit_adhoc_auto_discovery(self, mock_list_subs, mock_list_mgs, mock_scan, _mock_resolve) -> None:
         """audit without --policy and without -s/-m triggers auto-discovery."""
         mock_list_subs.return_value = [
             (VALID_SUB_ID, "Prod", VALID_TENANT_ID),
@@ -1383,12 +1371,14 @@ class TestCredentialCheck:
 
     def test_credential_check_skipped_on_dry_run(self) -> None:
         """--dry-run does not check credentials."""
-        policy_path_content = yaml.dump({
-            "version": "2.0",
-            "tenant_id": VALID_TENANT_ID,
-            "subscriptions": [{"id": VALID_SUB_ID, "name": "Test"}],
-            "rules": [{"name": "r", "type": "governance", "severity": "high", "match": {"role": "Owner"}}],
-        })
+        policy_path_content = yaml.dump(
+            {
+                "version": "2.0",
+                "tenant_id": VALID_TENANT_ID,
+                "subscriptions": [{"id": VALID_SUB_ID, "name": "Test"}],
+                "rules": [{"name": "r", "type": "governance", "severity": "high", "match": {"role": "Owner"}}],
+            }
+        )
         import tempfile
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -1401,11 +1391,13 @@ class TestCredentialCheck:
 
     def test_credential_check_skipped_on_validate(self) -> None:
         """validate does not check credentials (offline)."""
-        policy_path_content = yaml.dump({
-            "version": "2.0",
-            "tenant_id": VALID_TENANT_ID,
-            "subscriptions": [{"id": VALID_SUB_ID, "name": "Test"}],
-        })
+        policy_path_content = yaml.dump(
+            {
+                "version": "2.0",
+                "tenant_id": VALID_TENANT_ID,
+                "subscriptions": [{"id": VALID_SUB_ID, "name": "Test"}],
+            }
+        )
         import tempfile
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -1550,8 +1542,12 @@ class TestSnapshotCommand:
     @patch("az_rbac_watch.cli.list_accessible_management_groups")
     @patch("az_rbac_watch.cli.list_accessible_subscriptions")
     def test_snapshot_creates_file(
-        self, mock_list_subs: MagicMock, mock_list_mgs: MagicMock,
-        mock_scan: MagicMock, mock_resolve: MagicMock, tmp_path: Path,
+        self,
+        mock_list_subs: MagicMock,
+        mock_list_mgs: MagicMock,
+        mock_scan: MagicMock,
+        mock_resolve: MagicMock,
+        tmp_path: Path,
     ) -> None:
         mock_list_subs.return_value = [(VALID_SUB_ID, "Test-Sub", VALID_TENANT_ID)]
         mock_list_mgs.return_value = []
@@ -1567,12 +1563,20 @@ class TestSnapshotCommand:
         mock_resolve.return_value = mock_scan.return_value
 
         output = tmp_path / "snapshot.json"
-        result = runner.invoke(app, [
-            "snapshot", "-t", VALID_TENANT_ID, "-o", str(output),
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "snapshot",
+                "-t",
+                VALID_TENANT_ID,
+                "-o",
+                str(output),
+            ],
+        )
         assert result.exit_code == 0
         assert output.exists()
         import json
+
         data = json.loads(output.read_text())
         assert data["metadata"]["tenant_id"] == VALID_TENANT_ID
 

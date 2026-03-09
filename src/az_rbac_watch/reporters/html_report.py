@@ -40,6 +40,7 @@ class ScopeGroup:
     violations: int
     findings: list[ComplianceFinding]
 
+
 # ── Severity → CSS color mapping ────────────────────────────
 
 _SEVERITY_COLOR: dict[Severity, str] = {
@@ -433,7 +434,7 @@ def _truncate_scope(scope: str, max_segments: int = 2) -> str:
     parts = scope.strip("/").split("/")
     if len(parts) <= max_segments * 2:
         return scope
-    tail = "/".join(parts[-(max_segments * 2):])
+    tail = "/".join(parts[-(max_segments * 2) :])
     return f".../{tail}"
 
 
