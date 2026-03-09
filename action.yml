@@ -1,0 +1,133 @@
+name: "Azure Permissions Watch"
+description: "RBAC compliance monitoring for Azure — drift detection, governance guardrails, and change tracking."
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  mode:
+    description: "Command to run: scan, audit, validate, snapshot, diff"
+    required: true
+  policy:
+    description: "Path to policy YAML file"
+    required: false
+  tenant-id:
+    description: "Azure tenant ID"
+    required: false
+  subscriptions:
+    description: "Subscription IDs (comma-separated)"
+    required: false
+  management-groups:
+    description: "Management group IDs (comma-separated)"
+    required: false
+  format:
+    description: "Output format: console or json"
+    required: false
+    default: "console"
+  output:
+    description: "Output file path"
+    required: false
+  old-snapshot:
+    description: "Path to older snapshot JSON file (diff mode)"
+    required: false
+  new-snapshot:
+    description: "Path to newer snapshot JSON file (diff mode)"
+    required: false
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.12"
+  extra-args:
+    description: "Additional CLI arguments"
+    required: false
+
+outputs:
+  exit-code:
+    description: "Command exit code (0=compliant, 1=findings, 2=error)"
+    value: ${{ steps.run.outputs.exit-code }}
+  report-path:
+    description: "Path to generated report (if output was set)"
+    value: ${{ steps.run.outputs.report-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install az-rbac-watch
+      shell: bash
+      run: pip install az-rbac-watch
+
+    - name: Run az-rbac-watch
+      id: run
+      shell: bash
+      run: |
+        # Build the CLI command
+        CMD="az-rbac-watch ${{ inputs.mode }}"
+
+        # diff mode uses positional arguments
+        if [ "${{ inputs.mode }}" = "diff" ]; then
+          if [ -z "${{ inputs.old-snapshot }}" ] || [ -z "${{ inputs.new-snapshot }}" ]; then
+            echo "::error::diff mode requires old-snapshot and new-snapshot inputs"
+            exit 2
+          fi
+          CMD="$CMD ${{ inputs.old-snapshot }} ${{ inputs.new-snapshot }}"
+        fi
+
+        # Optional flags
+        if [ -n "${{ inputs.policy }}" ]; then
+          CMD="$CMD --policy ${{ inputs.policy }}"
+        fi
+
+        if [ -n "${{ inputs.tenant-id }}" ]; then
+          CMD="$CMD --tenant-id ${{ inputs.tenant-id }}"
+        fi
+
+        # Comma-separated subscriptions → repeated --subscription flags
+        if [ -n "${{ inputs.subscriptions }}" ]; then
+          IFS=',' read -ra SUBS <<< "${{ inputs.subscriptions }}"
+          for sub in "${SUBS[@]}"; do
+            CMD="$CMD --subscription $(echo "$sub" | xargs)"
+          done
+        fi
+
+        # Comma-separated management groups → repeated --management-group flags
+        if [ -n "${{ inputs.management-groups }}" ]; then
+          IFS=',' read -ra MGS <<< "${{ inputs.management-groups }}"
+          for mg in "${MGS[@]}"; do
+            CMD="$CMD --management-group $(echo "$mg" | xargs)"
+          done
+        fi
+
+        if [ "${{ inputs.format }}" != "console" ]; then
+          CMD="$CMD --format ${{ inputs.format }}"
+        fi
+
+        if [ -n "${{ inputs.output }}" ]; then
+          CMD="$CMD --output ${{ inputs.output }}"
+        fi
+
+        if [ -n "${{ inputs.extra-args }}" ]; then
+          CMD="$CMD ${{ inputs.extra-args }}"
+        fi
+
+        # Execute and capture exit code
+        echo "::group::az-rbac-watch ${{ inputs.mode }}"
+        echo "Running: $CMD"
+        set +e
+        eval "$CMD"
+        EXIT_CODE=$?
+        set -e
+        echo "::endgroup::"
+
+        # Set outputs
+        echo "exit-code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+        if [ -n "${{ inputs.output }}" ]; then
+          echo "report-path=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
+        fi
+
+        exit $EXIT_CODE
