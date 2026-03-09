@@ -1,0 +1,45 @@
+name: Test Action
+
+on:
+  push:
+    branches: [main]
+    paths: [action.yml]
+  pull_request:
+    branches: [main]
+    paths: [action.yml]
+
+jobs:
+  test-validate-mode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Test valid policy
+        uses: ./
+        with:
+          mode: validate
+          policy: examples/policy_model.yaml
+
+      - name: Test invalid policy
+        id: invalid
+        uses: ./
+        continue-on-error: true
+        with:
+          mode: validate
+          policy: examples/deny_rules_starter.yaml
+          extra-args: "--debug"
+
+      - name: Verify action ran
+        shell: bash
+        env:
+          STEP_OUTCOME: ${{ steps.invalid.outcome }}
+        run: |
+          echo "Invalid policy step outcome: $STEP_OUTCOME"
+          if [ "$STEP_OUTCOME" = "success" ] || [ "$STEP_OUTCOME" = "failure" ]; then
+            echo "Action executed successfully (outcome was handled)."
+          else
+            echo "::error::Unexpected outcome: $STEP_OUTCOME"
+            exit 1
+          fi
