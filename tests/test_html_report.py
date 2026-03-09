@@ -557,7 +557,9 @@ class TestExecutiveSummary:
 
     def test_with_findings(self) -> None:
         summary = _build_executive_summary(
-            total_assignments=128, scope_count=3, findings_by_severity={"critical": 2, "high": 3, "medium": 2},
+            total_assignments=128,
+            scope_count=3,
+            findings_by_severity={"critical": 2, "high": 3, "medium": 2},
         )
         assert "128 assignments" in summary
         assert "7 findings" in summary

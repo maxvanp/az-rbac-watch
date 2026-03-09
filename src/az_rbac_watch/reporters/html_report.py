@@ -536,11 +536,7 @@ def _build_executive_summary(
     else:
         finding_word = "finding" if total_findings == 1 else "findings"
         severity_order = ["critical", "high", "medium", "low", "info"]
-        breakdown = [
-            f"{count} {sev}"
-            for sev in severity_order
-            if (count := findings_by_severity.get(sev, 0)) > 0
-        ]
+        breakdown = [f"{count} {sev}" for sev in severity_order if (count := findings_by_severity.get(sev, 0)) > 0]
         parts.append(f"{total_findings} {finding_word} detected: {', '.join(breakdown)}.")
 
     return " ".join(parts)
