@@ -72,7 +72,13 @@ class TestGenerateJsonReport:
     def test_expected_top_level_keys(self) -> None:
         data = json.loads(generate_json_report(_make_report()))
         expected_keys = {
-            "policy_version", "tenant_id", "scan_timestamp", "findings", "summary", "scan_errors", "warnings",
+            "policy_version",
+            "tenant_id",
+            "scan_timestamp",
+            "findings",
+            "summary",
+            "scan_errors",
+            "warnings",
         }
         assert expected_keys == set(data.keys())
 

@@ -258,10 +258,7 @@ def _check_drift(
             ComplianceFinding(
                 rule_id=DRIFT,
                 severity=Severity.HIGH,
-                message=(
-                    f"Undeclared assignment: {a.principal_id}{name_part} "
-                    f"with role {a.role_name} at {a.scope}"
-                ),
+                message=(f"Undeclared assignment: {a.principal_id}{name_part} with role {a.role_name} at {a.scope}"),
                 assignment_id=a.id,
                 scope=a.scope,
                 principal_id=a.principal_id,

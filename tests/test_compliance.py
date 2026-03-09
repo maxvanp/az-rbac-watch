@@ -1531,9 +1531,7 @@ class TestOrphanSummaryCount:
 
     def test_violation_count_excludes_orphans(self):
         """violation_count should not count orphan findings."""
-        orphan = make_assignment(
-            principal_type=PrincipalType.UNKNOWN, role_name="Owner", assignment_id="orphan-1"
-        )
+        orphan = make_assignment(principal_type=PrincipalType.UNKNOWN, role_name="Owner", assignment_id="orphan-1")
         policy = make_policy(
             rules=[
                 {

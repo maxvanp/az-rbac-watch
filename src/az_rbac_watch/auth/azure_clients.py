@@ -125,9 +125,7 @@ def resolve_principal_names(
                     i + len(batch),
                 )
             else:
-                logger.warning(
-                    "Graph API HTTP error %d (batch %d-%d)", exc.response.status_code, i, i + len(batch)
-                )
+                logger.warning("Graph API HTTP error %d (batch %d-%d)", exc.response.status_code, i, i + len(batch))
         except Exception:
             logger.warning("Error resolving Graph names (batch %d-%d)", i, i + len(batch))
 

@@ -32,9 +32,7 @@ def format_diff_console(result: DiffResult) -> str:
 
     lines: list[str] = []
     lines.append(
-        f"Changes: +{result.added_count} added, "
-        f"-{result.removed_count} removed, "
-        f"~{result.modified_count} modified"
+        f"Changes: +{result.added_count} added, -{result.removed_count} removed, ~{result.modified_count} modified"
     )
     lines.append("")
 

@@ -883,9 +883,7 @@ class TestTypedExceptions:
         from azure.core.exceptions import ClientAuthenticationError
 
         client = _make_mock_client()
-        client.role_assignments.list_for_subscription.side_effect = ClientAuthenticationError(
-            message="Token expired"
-        )
+        client.role_assignments.list_for_subscription.side_effect = ClientAuthenticationError(message="Token expired")
 
         with pytest.raises(ClientAuthenticationError):
             scan_subscription(client, VALID_SUB_ID, "Bad-Sub")
@@ -921,9 +919,7 @@ class TestTypedExceptions:
         from azure.core.exceptions import ClientAuthenticationError
 
         client = _make_mock_client()
-        client.role_assignments.list_for_scope.side_effect = ClientAuthenticationError(
-            message="Token expired"
-        )
+        client.role_assignments.list_for_scope.side_effect = ClientAuthenticationError(message="Token expired")
 
         with pytest.raises(ClientAuthenticationError):
             scan_management_group(client, VALID_MG_ID, "Test-MG")

@@ -27,13 +27,21 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      - name: Format check
+        run: ruff format --check .
+
       - name: Type check
         run: mypy src/ tests/
 
-      - name: Test
-        run: pytest
+      - name: Test with coverage
+        run: pytest --cov=az_rbac_watch --cov-fail-under=80
 
       - name: Build package
         run: |
           pip install build hatch-vcs
           python -m build
+
+      - name: Security audit
+        run: |
+          pip install pip-audit
+          pip-audit
