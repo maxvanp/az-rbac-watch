@@ -110,3 +110,63 @@ class TestGenerateJsonReport:
         ]
         data = json.loads(generate_json_report(_make_report(findings)))
         assert data["findings"][0]["principal_display_name"] == "GRP-TEAM-INFRA"
+
+
+class TestJsonPortalLinks:
+    def test_scope_url_in_findings(self) -> None:
+        findings = [
+            ComplianceFinding(
+                rule_id=OUT_OF_BASELINE,
+                severity=Severity.HIGH,
+                message="Test finding",
+                principal_id="aaa",
+                role_name="Owner",
+                scope="/subscriptions/xxx",
+            )
+        ]
+        data = json.loads(generate_json_report(_make_report(findings)))
+        finding = data["findings"][0]
+        assert "scope_url" in finding
+        assert "portal.azure.com" in finding["scope_url"]
+
+    def test_principal_url_in_findings(self) -> None:
+        findings = [
+            ComplianceFinding(
+                rule_id=OUT_OF_BASELINE,
+                severity=Severity.HIGH,
+                message="Test finding",
+                principal_id="aaa",
+                role_name="Owner",
+                scope="/subscriptions/xxx",
+            )
+        ]
+        data = json.loads(generate_json_report(_make_report(findings)))
+        finding = data["findings"][0]
+        assert "principal_url" in finding
+        assert "ManagedAppMenuBlade" in finding["principal_url"]
+
+    def test_no_findings_no_error(self) -> None:
+        data = json.loads(generate_json_report(_make_report()))
+        assert data["findings"] == []
+
+    def test_scope_url_none_for_empty_scope(self) -> None:
+        findings = [
+            ComplianceFinding(
+                rule_id="TEST",
+                severity=Severity.HIGH,
+                message="test",
+            )
+        ]
+        data = json.loads(generate_json_report(_make_report(findings)))
+        assert data["findings"][0]["scope_url"] is None
+
+    def test_principal_url_none_for_empty_principal(self) -> None:
+        findings = [
+            ComplianceFinding(
+                rule_id="TEST",
+                severity=Severity.HIGH,
+                message="test",
+            )
+        ]
+        data = json.loads(generate_json_report(_make_report(findings)))
+        assert data["findings"][0]["principal_url"] is None
