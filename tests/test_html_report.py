@@ -688,3 +688,22 @@ class TestHtmlOrphanCard:
         generate_html_report(report, out)
         html = out.read_text(encoding="utf-8")
         assert "Orphaned" not in html
+
+
+# ── TestHtmlPortalLinks ────────────────────────────────────
+
+
+class TestHtmlPortalLinks:
+    def test_scope_link_present(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "portal.azure.com" in html
+        assert 'target="_blank"' in html
+
+    def test_principal_link_present(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "ManagedAppMenuBlade" in html
+        assert "user-1111" in html
