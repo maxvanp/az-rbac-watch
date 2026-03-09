@@ -164,3 +164,20 @@ class TestDiffHtmlReport:
         html = out.read_text(encoding="utf-8")
         assert "<script>" not in html
         assert "&lt;script&gt;" in html
+
+
+class TestDiffHtmlPortalLinks:
+    def test_scope_link_in_added(self, tmp_path: Path) -> None:
+        result = DiffResult(added=[_make_sa()])
+        out = tmp_path / "diff.html"
+        format_diff_html(result, _make_snapshot(), _make_snapshot(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "portal.azure.com" in html
+        assert 'target="_blank"' in html
+
+    def test_principal_link_in_added(self, tmp_path: Path) -> None:
+        result = DiffResult(added=[_make_sa()])
+        out = tmp_path / "diff.html"
+        format_diff_html(result, _make_snapshot(), _make_snapshot(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "ManagedAppMenuBlade" in html

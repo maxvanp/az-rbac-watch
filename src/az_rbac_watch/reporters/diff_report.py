@@ -10,6 +10,7 @@ from jinja2 import Environment
 
 from az_rbac_watch.analyzers.diff import DiffResult
 from az_rbac_watch.scanner.snapshot import Snapshot
+from az_rbac_watch.utils.portal_links import build_principal_url, build_scope_url
 
 __all__ = ["format_diff_console", "format_diff_html", "format_diff_json"]
 
@@ -124,6 +125,7 @@ _DIFF_HTML_TEMPLATE = """\
   }
   .verdict-ok { background: #d4edda; color: #155724; }
   .verdict-ko { background: #f8d7da; color: #721c24; }
+  a.portal { color: #0078d4; text-decoration: none; }
   .footer { text-align: center; font-size: 0.8rem; color: #b2bec3; padding: 16px 0; }
 </style>
 </head>
@@ -169,14 +171,31 @@ _DIFF_HTML_TEMPLATE = """\
         <tr>
           <td><span class="badge badge-added">ADDED</span></td>
           <td>
+            {%- set principal_url = build_principal_url(a.principal_id) -%}
             {%- if a.principal_display_name -%}
-              {{ a.principal_display_name }}<br><small>{{ a.principal_id }}</small>
+              {%- if principal_url -%}
+                <a href="{{ principal_url }}" target="_blank" class="portal"
+                >{{ a.principal_display_name }}</a><br><small>{{ a.principal_id }}</small>
+              {%- else -%}
+                {{ a.principal_display_name }}<br><small>{{ a.principal_id }}</small>
+              {%- endif -%}
             {%- else -%}
-              {{ a.principal_id }}
+              {%- if principal_url -%}
+                <a href="{{ principal_url }}" target="_blank" class="portal">{{ a.principal_id }}</a>
+              {%- else -%}
+                {{ a.principal_id }}
+              {%- endif -%}
             {%- endif -%}
           </td>
           <td>{{ a.role_name or '?' }}</td>
-          <td title="{{ a.scope }}">{{ truncate_scope(a.scope) }}</td>
+          <td title="{{ a.scope }}">
+            {%- set scope_url = build_scope_url(a.scope) -%}
+            {%- if scope_url -%}
+              <a href="{{ scope_url }}" target="_blank" class="portal">{{ truncate_scope(a.scope) }}</a>
+            {%- else -%}
+              {{ truncate_scope(a.scope) }}
+            {%- endif -%}
+          </td>
           <td></td>
         </tr>
         {% endfor %}
@@ -184,14 +203,31 @@ _DIFF_HTML_TEMPLATE = """\
         <tr>
           <td><span class="badge badge-removed">REMOVED</span></td>
           <td>
+            {%- set principal_url = build_principal_url(a.principal_id) -%}
             {%- if a.principal_display_name -%}
-              {{ a.principal_display_name }}<br><small>{{ a.principal_id }}</small>
+              {%- if principal_url -%}
+                <a href="{{ principal_url }}" target="_blank" class="portal"
+                >{{ a.principal_display_name }}</a><br><small>{{ a.principal_id }}</small>
+              {%- else -%}
+                {{ a.principal_display_name }}<br><small>{{ a.principal_id }}</small>
+              {%- endif -%}
             {%- else -%}
-              {{ a.principal_id }}
+              {%- if principal_url -%}
+                <a href="{{ principal_url }}" target="_blank" class="portal">{{ a.principal_id }}</a>
+              {%- else -%}
+                {{ a.principal_id }}
+              {%- endif -%}
             {%- endif -%}
           </td>
           <td>{{ a.role_name or '?' }}</td>
-          <td title="{{ a.scope }}">{{ truncate_scope(a.scope) }}</td>
+          <td title="{{ a.scope }}">
+            {%- set scope_url = build_scope_url(a.scope) -%}
+            {%- if scope_url -%}
+              <a href="{{ scope_url }}" target="_blank" class="portal">{{ truncate_scope(a.scope) }}</a>
+            {%- else -%}
+              {{ truncate_scope(a.scope) }}
+            {%- endif -%}
+          </td>
           <td></td>
         </tr>
         {% endfor %}
@@ -259,6 +295,8 @@ def format_diff_html(
 
     env = Environment(autoescape=True)
     env.globals["truncate_scope"] = _truncate_scope
+    env.globals["build_scope_url"] = lambda s: build_scope_url(s, old_snapshot.metadata.tenant_id)
+    env.globals["build_principal_url"] = build_principal_url
     template = env.from_string(_DIFF_HTML_TEMPLATE)
 
     html = template.render(

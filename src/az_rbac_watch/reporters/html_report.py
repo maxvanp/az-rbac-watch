@@ -22,6 +22,7 @@ from az_rbac_watch.analyzers.compliance import (
     ComplianceReport,
     Severity,
 )
+from az_rbac_watch.utils.portal_links import build_principal_url, build_scope_url
 from az_rbac_watch.utils.scope import scope_group_key
 
 __all__ = ["ScopeGroup", "generate_html_report"]
@@ -396,14 +397,35 @@ _HTML_TEMPLATE = """\
             style="background:{{ sc }}">{{ f.severity.value | upper }}</span></td>
           <td>{{ f.rule_id }}</td>
           <td>
+            {%- set principal_url = build_principal_url(f.principal_id) -%}
             {%- if f.principal_display_name -%}
-              {{ f.principal_display_name }}<br><small>{{ f.principal_id }}</small>
+              {%- if principal_url -%}
+                <a href="{{ principal_url }}" target="_blank"
+                  style="color:#0078d4;text-decoration:none"
+                  >{{ f.principal_display_name }}</a>
+                <br><small>{{ f.principal_id }}</small>
+              {%- else -%}
+                {{ f.principal_display_name }}
+                <br><small>{{ f.principal_id }}</small>
+              {%- endif -%}
             {%- else -%}
-              {{ f.principal_id }}
+              {%- if principal_url -%}
+                <a href="{{ principal_url }}" target="_blank"
+                  style="color:#0078d4;text-decoration:none">{{ f.principal_id }}</a>
+              {%- else -%}
+                {{ f.principal_id }}
+              {%- endif -%}
             {%- endif -%}
           </td>
           <td>{{ f.role_name }}</td>
-          <td title="{{ f.scope }}">{{ truncate_scope(f.scope) }}
+          <td title="{{ f.scope }}">
+            {%- set scope_url = build_scope_url(f.scope) -%}
+            {%- if scope_url -%}
+              <a href="{{ scope_url }}" target="_blank"
+                style="color:#0078d4;text-decoration:none">{{ truncate_scope(f.scope) }}</a>
+            {%- else -%}
+              {{ truncate_scope(f.scope) }}
+            {%- endif -%}
             {%- if f.details.get('remediation') %}
             <div class="remediation">{{ f.details['remediation'] }}</div>
             {%- endif %}
@@ -617,6 +639,8 @@ def generate_html_report(
     env = Environment(autoescape=True)
     env.globals["severity_color"] = lambda s: _SEVERITY_COLOR.get(s, "#6c757d")
     env.globals["truncate_scope"] = _truncate_scope
+    env.globals["build_scope_url"] = lambda s: build_scope_url(s, report.tenant_id)
+    env.globals["build_principal_url"] = build_principal_url
     template = env.from_string(_HTML_TEMPLATE)
 
     html = template.render(
