@@ -1687,3 +1687,49 @@ class TestDiffCommand:
         assert result.exit_code == 0
         parsed = json.loads(result.output)
         assert parsed["summary"]["has_changes"] is False
+
+    def test_diff_html_auto_detect(self, tmp_path: Path) -> None:
+        import json
+
+        old_data = {
+            "version": "1.0",
+            "metadata": {
+                "timestamp": "2026-03-08T12:00:00Z",
+                "tenant_id": VALID_TENANT_ID,
+                "tool_version": "0.4.0",
+            },
+            "scopes": {"subscriptions": [], "management_groups": []},
+            "assignments": [
+                {
+                    "id": "a-1",
+                    "scope": "/subscriptions/sub-1",
+                    "role_name": "Reader",
+                    "role_type": "BuiltInRole",
+                    "principal_id": "p-1",
+                    "principal_type": "User",
+                    "principal_display_name": "Alice",
+                }
+            ],
+            "role_definitions": [],
+        }
+        new_data = {
+            "version": "1.0",
+            "metadata": {
+                "timestamp": "2026-03-09T12:00:00Z",
+                "tenant_id": VALID_TENANT_ID,
+                "tool_version": "0.4.0",
+            },
+            "scopes": {"subscriptions": [], "management_groups": []},
+            "assignments": [],
+            "role_definitions": [],
+        }
+        f1 = tmp_path / "old.json"
+        f2 = tmp_path / "new.json"
+        f1.write_text(json.dumps(old_data))
+        f2.write_text(json.dumps(new_data))
+        out = tmp_path / "report.html"
+        result = runner.invoke(app, ["diff", str(f1), str(f2), "--output", str(out)])
+        assert result.exit_code == 1
+        assert out.exists()
+        content = out.read_text(encoding="utf-8")
+        assert "<html" in content.lower()

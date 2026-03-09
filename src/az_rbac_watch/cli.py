@@ -994,7 +994,7 @@ def diff_snapshots(
     ],
     fmt: Annotated[
         str,
-        typer.Option("--format", "-f", help="Output format: console, json."),
+        typer.Option("--format", "-f", help="Output format: console, json, html."),
     ] = "console",
     output: Annotated[
         Path | None,
@@ -1002,8 +1002,8 @@ def diff_snapshots(
     ] = None,
 ) -> None:
     """Compare two snapshots and show RBAC changes."""
-    if fmt not in ("console", "json"):
-        console.print(f"[bold red]Error[/bold red]: Unknown format '{fmt}'. Use 'console' or 'json'.")
+    if fmt not in ("console", "json", "html"):
+        console.print(f"[bold red]Error[/bold red]: Unknown format '{fmt}'. Use 'console', 'json', or 'html'.")
         raise typer.Exit(code=2)
 
     from az_rbac_watch.analyzers.diff import compute_diff
@@ -1022,12 +1022,32 @@ def diff_snapshots(
 
     result = compute_diff(old.assignments, new.assignments)
 
-    text = format_diff_json(result) if fmt == "json" else format_diff_console(result)
+    # Auto-detect HTML from output extension
+    effective_fmt = fmt
+    if output is not None and fmt == "console" and output.suffix.lower() == ".html":
+        effective_fmt = "html"
 
-    if output is not None:
-        output.write_text(text, encoding="utf-8")
+    if effective_fmt == "html":
+        if output is None:
+            console.print("[bold red]Error[/bold red]: HTML format requires --output.")
+            raise typer.Exit(code=2)
+        from az_rbac_watch.reporters.diff_report import format_diff_html
+
+        format_diff_html(result, old, new, output)
         console.print(f"Diff report written to: [bold]{output}[/bold]")
+    elif effective_fmt == "json":
+        text = format_diff_json(result)
+        if output is not None:
+            output.write_text(text, encoding="utf-8")
+            console.print(f"Diff report written to: [bold]{output}[/bold]")
+        else:
+            print(text)  # noqa: T201 — raw stdout for test capture and clean JSON
     else:
-        print(text)  # noqa: T201 — raw stdout for test capture and clean JSON
+        text = format_diff_console(result)
+        if output is not None:
+            output.write_text(text, encoding="utf-8")
+            console.print(f"Diff report written to: [bold]{output}[/bold]")
+        else:
+            print(text)  # noqa: T201 — raw stdout for test capture and clean JSON
 
     raise typer.Exit(code=1 if result.has_changes else 0)
