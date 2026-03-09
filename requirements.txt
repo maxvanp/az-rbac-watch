@@ -15,7 +15,7 @@ azure-mgmt-resource==25.0.0
 azure-mgmt-subscription==3.1.1
 certifi==2026.1.4
 cffi==2.0.0
-charset-normalizer==3.4.4
+charset-normalizer==3.4.5
 click==8.3.1
 cryptography==46.0.5
 frozenlist==1.8.0
