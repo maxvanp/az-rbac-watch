@@ -8,6 +8,7 @@ Two complementary commands in one tool:
 
 - **`scan`** — **RBAC as Code** (affirmative): declare your desired RBAC state in YAML, detect drift from that state
 - **`audit`** — **Policy as Code** (negative): define forbidden patterns (guardrails), detect violations
+- **`scan --orphans-only`** — detect assignments referencing deleted principals (orphaned identities)
 
 Both commands share the same RBAC scanner — the differentiating value is that neither OPA nor Azure Policy can natively scan RBAC assignments.
 
@@ -89,12 +90,33 @@ A starter kit with common governance rules is available in [`examples/deny_rules
 az-rbac-watch validate -p my_policy.yaml
 ```
 
+### 6. Capture RBAC snapshots
+
+```bash
+# From a policy file
+az-rbac-watch snapshot -p my_policy.yaml -o snapshot_2026-03-09.json
+
+# From explicit scopes
+az-rbac-watch snapshot -t <tenant-id> -s <subscription-id> -o snapshot.json
+```
+
+### 7. Compare snapshots (change tracking)
+
+```bash
+# Console output
+az-rbac-watch diff snapshot_old.json snapshot_new.json
+
+# JSON (CI/CD)
+az-rbac-watch diff snapshot_old.json snapshot_new.json --format json -o changes.json
+```
+
 ## Two axes, one tool
 
 | Axis | Command | Rule type | Finding | Question answered |
 |------|---------|-----------|---------|-------------------|
 | RBAC as Code | `scan` | `baseline` | `DRIFT` | "Is there something I didn't declare?" |
 | Policy as Code | `audit` | `governance` | `GOVERNANCE_VIOLATION` | "Is there something forbidden?" |
+| Change tracking | `snapshot` + `diff` | n/a | Added / Removed / Modified | "What changed since last time?" |
 
 You can use both in the same policy file. Each command focuses on its rule type and ignores the other.
 
@@ -124,8 +146,13 @@ Detects RBAC drift — compares actual state against baseline rules.
 | Option | Description |
 |---|---|
 | `-p, --policy PATH` | Policy model YAML (required) |
+| `-t, --tenant-id ID` | Tenant ID (ad-hoc mode) |
+| `-s, --subscription ID` | Subscription to scan, repeatable (ad-hoc mode) |
+| `-m, --management-group ID` | Management group to scan, repeatable (ad-hoc mode) |
 | `-o, --output PATH` | HTML report output path |
 | `-f, --format FORMAT` | `console` (default) or `json` |
+| `--orphans-only` | Scan only for orphaned assignments (requires `--tenant-id`) |
+| `--dry-run` | Show scan plan without making API calls |
 | `--exclude-subscription ID` | Exclude subscription (repeatable) |
 | `--exclude-management-group ID` | Exclude management group (repeatable) |
 | `-v, --verbose` | Debug logging |
@@ -138,8 +165,12 @@ Checks governance guardrails — evaluates governance rules against actual state
 | Option | Description |
 |---|---|
 | `-p, --policy PATH` | Policy model YAML (required) |
+| `-t, --tenant-id ID` | Tenant ID (ad-hoc mode) |
+| `-s, --subscription ID` | Subscription to scan, repeatable (ad-hoc mode) |
+| `-m, --management-group ID` | Management group to scan, repeatable (ad-hoc mode) |
 | `-o, --output PATH` | HTML report output path |
 | `-f, --format FORMAT` | `console` (default) or `json` |
+| `--dry-run` | Show scan plan without making API calls |
 | `--exclude-subscription ID` | Exclude subscription (repeatable) |
 | `--exclude-management-group ID` | Exclude management group (repeatable) |
 | `-v, --verbose` | Debug logging |
@@ -160,6 +191,33 @@ Checks governance guardrails — evaluates governance rules against actual state
 |---|---|
 | `-p, --policy PATH` | Policy model YAML to validate (required) |
 
+### `az-rbac-watch snapshot`
+
+Captures a full RBAC snapshot (assignments + role definitions) as JSON.
+
+| Option | Description |
+|---|---|
+| `-p, --policy PATH` | Policy model YAML (uses its scopes) |
+| `-t, --tenant-id ID` | Tenant ID |
+| `-s, --subscription ID` | Subscription to scan (repeatable) |
+| `-m, --management-group ID` | Management group to scan (repeatable) |
+| `--exclude-subscription ID` | Exclude subscription (repeatable) |
+| `--exclude-management-group ID` | Exclude management group (repeatable) |
+| `-o, --output PATH` | Output JSON file (required) |
+| `-v, --verbose` | Debug logging |
+| `--debug` | Show full traceback on error |
+
+### `az-rbac-watch diff`
+
+Compares two snapshots and shows RBAC changes (added, removed, modified assignments).
+
+| Option | Description |
+|---|---|
+| `OLD_SNAPSHOT` | Path to the older snapshot JSON file (required) |
+| `NEW_SNAPSHOT` | Path to the newer snapshot JSON file (required) |
+| `-f, --format FORMAT` | `console` (default) or `json` |
+| `-o, --output PATH` | Output file path |
+
 ## Exit codes
 
 | Code | Meaning |
@@ -167,6 +225,8 @@ Checks governance guardrails — evaluates governance rules against actual state
 | `0` | Compliant — no findings detected |
 | `1` | Non-compliant — findings detected |
 | `2` | Error — authentication failure, API error, invalid YAML |
+
+The `diff` command returns `0` for no changes, `1` for changes detected.
 
 Example CI/CD usage:
 
