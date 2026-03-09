@@ -11,6 +11,7 @@ from rich.text import Text
 
 from az_rbac_watch.analyzers.compliance import SEVERITY_ORDER, ComplianceReport, Severity
 from az_rbac_watch.config.policy_model import PolicyModel
+from az_rbac_watch.utils.portal_links import build_principal_url, build_scope_url
 
 __all__ = ["print_audit_report", "print_compliance_report", "print_discover_summary", "print_drift_report"]
 
@@ -98,13 +99,19 @@ def _print_report(
         for f in sorted_findings:
             style = _SEVERITY_STYLE.get(f.severity, "")
             severity_text = Text(f.severity.value.upper(), style=style)
-            principal_cell = (
-                f"{f.principal_display_name}\n({f.principal_id})" if f.principal_display_name else f.principal_id
-            )
+            principal_url = build_principal_url(f.principal_id)
+            if f.principal_display_name:
+                if principal_url:
+                    principal_cell = f"[link={principal_url}]{f.principal_display_name}[/link]\n({f.principal_id})"
+                else:
+                    principal_cell = f"{f.principal_display_name}\n({f.principal_id})"
+            else:
+                principal_cell = f"[link={principal_url}]{f.principal_id}[/link]" if principal_url else f.principal_id
             remediation = f.details.get("remediation", "")
-            scope_cell = f.scope
+            scope_url = build_scope_url(f.scope, report.tenant_id)
+            scope_cell = f"[link={scope_url}]{f.scope}[/link]" if scope_url else f.scope
             if remediation:
-                scope_cell = f"{f.scope}\n[dim]Remediation : {remediation}[/dim]"
+                scope_cell = f"{scope_cell}\n[dim]Remediation : {remediation}[/dim]"
             table.add_row(
                 severity_text,
                 f.rule_id,

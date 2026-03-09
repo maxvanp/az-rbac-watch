@@ -20,6 +20,7 @@ from az_rbac_watch.config.policy_model import PolicyModel, Rule, RuleMatch
 from az_rbac_watch.reporters.console_report import (
     print_compliance_report,
     print_discover_summary,
+    print_drift_report,
 )
 
 TENANT_ID = "11111111-1111-1111-1111-111111111111"
@@ -300,3 +301,40 @@ class TestRemediationHint:
         print_compliance_report(report, console=console)
         output = buf.getvalue()
         assert "Remediation" not in output
+
+
+# ── TestConsolePortalLinks ─────────────────────────────────
+
+
+def _make_markup_console() -> tuple[Console, StringIO]:
+    """Create a Rich console that preserves markup (for link assertions)."""
+    buf = StringIO()
+    console = Console(file=buf, highlight=False, no_color=True, width=200, markup=True)
+    return console, buf
+
+
+class TestConsolePortalLinks:
+    """Tests for Azure Portal link markup in console output."""
+
+    @staticmethod
+    def _make_link_console() -> tuple[Console, StringIO]:
+        """Console with force_terminal so Rich emits OSC 8 hyperlink sequences."""
+        buf = StringIO()
+        console = Console(file=buf, highlight=False, force_terminal=True, width=200)
+        return console, buf
+
+    def test_scope_link_in_output(self) -> None:
+        """Rich link markup appears for scope."""
+        console, buf = self._make_link_console()
+        report = _report_with_findings()
+        print_drift_report(report, console=console)
+        output = buf.getvalue()
+        assert "portal.azure.com" in output
+
+    def test_principal_link_in_output(self) -> None:
+        """Rich link markup appears for principal."""
+        console, buf = self._make_link_console()
+        report = _report_with_findings()
+        print_drift_report(report, console=console)
+        output = buf.getvalue()
+        assert "ManagedAppMenuBlade" in output
