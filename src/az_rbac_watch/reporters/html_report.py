@@ -158,7 +158,7 @@ _HTML_TEMPLATE = """\
     color: #fff; padding: 32px 24px; border-radius: 8px; margin-bottom: 24px;
   }
   .header p { margin: 4px 0; opacity: 0.9; font-size: 0.95rem; }
-  .cards { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .cards { display: flex; gap: 16px; flex-wrap: wrap; flex: 1; }
   .card {
     flex: 1; min-width: 180px; background: #fff; border-radius: 8px;
     padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); text-align: center;
@@ -229,16 +229,47 @@ _HTML_TEMPLATE = """\
   }
   .filter-count { font-size: 0.85rem; color: #636e72; margin-left: auto; }
   .scope-truncated { cursor: help; }
+  .header-content { display: flex; align-items: center; gap: 32px; }
+  .header-text { flex: 1; }
+  .compliance-score { text-align: center; flex-shrink: 0; }
+  .compliance-score .score-label { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; }
+  .executive-summary {
+    background: rgba(255,255,255,0.1); border-radius: 6px;
+    padding: 12px 16px; margin-top: 12px; font-size: 0.9rem; opacity: 0.95;
+  }
+  .stats-row { display: flex; gap: 24px; margin-bottom: 24px; align-items: flex-start; flex-wrap: wrap; }
+  .donut-chart { flex-shrink: 0; text-align: center; }
+  .donut-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; justify-content: center; }
+  .donut-legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: #636e72; }
+  .donut-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
   .footer { text-align: center; font-size: 0.8rem; color: #b2bec3; padding: 16px 0; }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
-    <h1>{{ labels.title }}</h1>
-    <p>Tenant : {{ report.tenant_id }}</p>
-    <p>Policy version : {{ report.policy_version }}</p>
-    <p>Scan : {{ report.scan_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}</p>
+    <div class="header-content">
+      <div class="header-text">
+        <h1>{{ labels.title }}</h1>
+        <p>Tenant : {{ report.tenant_id }}</p>
+        <p>Policy version : {{ report.policy_version }}</p>
+        <p>Scan : {{ report.scan_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}</p>
+      </div>
+      <div class="compliance-score">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff33" stroke-width="8"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="{{ score_color }}" stroke-width="8"
+            stroke-dasharray="{{ score * 2.51327 }} {{ 251.327 - score * 2.51327 }}"
+            stroke-dashoffset="62.83" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          <text x="50" y="50" text-anchor="middle" dominant-baseline="central"
+            fill="#fff" font-size="22" font-weight="700">{{ score }}%</text>
+        </svg>
+        <div class="score-label">Compliance</div>
+      </div>
+    </div>
+    {% if executive_summary %}
+    <div class="executive-summary">{{ executive_summary }}</div>
+    {% endif %}
   </div>
 
   {% if report.warnings %}
@@ -252,29 +283,59 @@ _HTML_TEMPLATE = """\
   </div>
   {% endif %}
 
-  <div class="cards">
-    <div class="card">
-      <div class="value">{{ report.summary.total_assignments_checked }}</div>
-      <div class="label">Assignments scanned</div>
-    </div>
-    {% if labels.drift_label %}
-    <div class="card">
-      {% set dc = report.summary.drift_count %}
-      <div class="value" style="color: {{ '#e74c3c' if dc else '#27ae60' }}">{{ dc }}</div>
-      <div class="label">{{ labels.drift_label }}</div>
+  <div class="stats-row">
+    {% if donut_arcs %}
+    <div class="donut-chart">
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        {% for arc in donut_arcs %}
+        <circle cx="70" cy="70" r="50" fill="none" stroke="{{ arc.color }}" stroke-width="20"
+          stroke-dasharray="{{ arc.percentage * 3.14159 }} {{ 314.159 - arc.percentage * 3.14159 }}"
+          stroke-dashoffset="{{ -arc.offset * 3.14159 }}"
+          transform="rotate(-90 70 70)"/>
+        {% endfor %}
+      </svg>
+      <div class="donut-legend">
+        {% for arc in donut_arcs %}
+        <span class="donut-legend-item">
+          <span class="donut-legend-dot" style="background:{{ arc.color }}"></span>
+          {{ arc.count }} {{ arc.severity | upper }}
+        </span>
+        {% endfor %}
+      </div>
     </div>
     {% endif %}
-    {% if labels.violation_label %}
-    <div class="card">
-      {% set vc = report.summary.violation_count %}
-      <div class="value" style="color: {{ '#e74c3c' if vc else '#27ae60' }}">{{ vc }}</div>
-      <div class="label">{{ labels.violation_label }}</div>
-    </div>
-    {% endif %}
-    <div class="card">
-      {% set tf = report.summary.total_findings %}
-      <div class="value" style="color: {{ '#e74c3c' if tf else '#27ae60' }}">{{ tf }}</div>
-      <div class="label">Total findings</div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="value">{{ report.summary.total_assignments_checked }}</div>
+        <div class="label">Assignments scanned</div>
+      </div>
+      {% if labels.drift_label %}
+      <div class="card">
+        {% set dc = report.summary.drift_count %}
+        <div class="value" style="color: {{ '#e74c3c' if dc else '#27ae60' }}">{{ dc }}</div>
+        <div class="label">{{ labels.drift_label }}</div>
+      </div>
+      {% endif %}
+      {% if labels.violation_label %}
+      <div class="card">
+        {% set vc = report.summary.violation_count %}
+        <div class="value" style="color: {{ '#e74c3c' if vc else '#27ae60' }}">{{ vc }}</div>
+        <div class="label">{{ labels.violation_label }}</div>
+      </div>
+      {% endif %}
+      <div class="card">
+        {% set tf = report.summary.total_findings %}
+        <div class="value" style="color: {{ '#e74c3c' if tf else '#27ae60' }}">{{ tf }}</div>
+        <div class="label">Total findings</div>
+      </div>
+      {% if report.summary.orphan_count > 0 %}
+      <div class="card">
+        {% set oc = report.summary.orphan_count %}
+        <div class="value" style="color: #e74c3c">{{ oc }}</div>
+        <div class="label">Orphaned</div>
+      </div>
+      {% endif %}
     </div>
   </div>
 
@@ -438,6 +499,83 @@ def _truncate_scope(scope: str, max_segments: int = 2) -> str:
     return f".../{tail}"
 
 
+def _compute_compliance_score(total_assignments: int, total_findings: int) -> int:
+    """Compute compliance as a percentage: (total - findings) / total * 100.
+
+    Returns 100 if no assignments. Clamps to 0 if findings > assignments.
+    """
+    if total_assignments == 0:
+        return 100
+    score = (total_assignments - total_findings) / total_assignments * 100
+    return max(0, round(score))
+
+
+def _score_color(score: int) -> str:
+    """Return a CSS color for the compliance score."""
+    if score >= 90:
+        return "#27ae60"
+    if score >= 70:
+        return "#f39c12"
+    if score >= 50:
+        return "#e67e22"
+    return "#e74c3c"
+
+
+def _build_executive_summary(
+    total_assignments: int,
+    scope_count: int,
+    findings_by_severity: dict[str, int],
+) -> str:
+    """Build a 1-2 sentence executive summary for the HTML report."""
+    scope_word = "scope" if scope_count == 1 else "scopes"
+    parts = [f"{total_assignments} assignments scanned across {scope_count} {scope_word}."]
+
+    total_findings = sum(findings_by_severity.values())
+    if total_findings == 0:
+        parts.append("No findings detected.")
+    else:
+        finding_word = "finding" if total_findings == 1 else "findings"
+        severity_order = ["critical", "high", "medium", "low", "info"]
+        breakdown = [f"{count} {sev}" for sev in severity_order if (count := findings_by_severity.get(sev, 0)) > 0]
+        parts.append(f"{total_findings} {finding_word} detected: {', '.join(breakdown)}.")
+
+    return " ".join(parts)
+
+
+@dataclass(frozen=True)
+class DonutArc:
+    """One arc segment of the severity donut chart."""
+
+    severity: str
+    count: int
+    percentage: float
+    offset: float
+    color: str
+
+
+_SEVERITY_SORT = ["critical", "high", "medium", "low", "info"]
+
+
+def _compute_donut_arcs(findings_by_severity: dict[str, int]) -> list[DonutArc]:
+    """Compute SVG donut arc segments from severity counts."""
+    total = sum(findings_by_severity.values())
+    if total == 0:
+        return []
+
+    arcs: list[DonutArc] = []
+    offset = 0.0
+    for sev in _SEVERITY_SORT:
+        count = findings_by_severity.get(sev, 0)
+        if count == 0:
+            continue
+        pct = count / total * 100
+        color = _SEVERITY_COLOR.get(Severity(sev), "#6c757d")
+        arcs.append(DonutArc(severity=sev, count=count, percentage=pct, offset=offset, color=color))
+        offset += pct
+
+    return arcs
+
+
 # ── Public API ──────────────────────────────────────────────
 
 
@@ -463,6 +601,19 @@ def generate_html_report(
     finding_groups = _group_findings_by_scope(sorted_findings, scope_names)
     labels = _MODE_LABELS[mode]
 
+    score = _compute_compliance_score(
+        report.summary.total_assignments_checked,
+        report.summary.total_findings,
+    )
+    score_clr = _score_color(score)
+    scope_count = len(finding_groups) if finding_groups else (1 if report.summary.total_assignments_checked > 0 else 0)
+    exec_summary = _build_executive_summary(
+        report.summary.total_assignments_checked,
+        scope_count,
+        report.summary.findings_by_severity,
+    )
+    donut_arcs = _compute_donut_arcs(report.summary.findings_by_severity)
+
     env = Environment(autoescape=True)
     env.globals["severity_color"] = lambda s: _SEVERITY_COLOR.get(s, "#6c757d")
     env.globals["truncate_scope"] = _truncate_scope
@@ -472,6 +623,10 @@ def generate_html_report(
         report=report,
         finding_groups=finding_groups,
         labels=labels,
+        score=score,
+        score_color=score_clr,
+        executive_summary=exec_summary,
+        donut_arcs=donut_arcs,
     )
 
     output_path.write_text(html, encoding="utf-8")

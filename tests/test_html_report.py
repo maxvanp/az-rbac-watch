@@ -13,7 +13,14 @@ from az_rbac_watch.analyzers.compliance import (
     ComplianceSummary,
     Severity,
 )
-from az_rbac_watch.reporters.html_report import _truncate_scope, generate_html_report
+from az_rbac_watch.reporters.html_report import (
+    _build_executive_summary,
+    _compute_compliance_score,
+    _compute_donut_arcs,
+    _score_color,
+    _truncate_scope,
+    generate_html_report,
+)
 
 SUB_1 = "11111111-1111-1111-1111-111111111111"
 SUB_2 = "22222222-2222-2222-2222-222222222222"
@@ -492,3 +499,192 @@ class TestHtmlRemediation:
         html = out.read_text(encoding="utf-8")
         # Existing findings don't have remediation, so no remediation divs
         assert 'class="remediation"' not in html
+
+
+# ── TestComplianceScore ─────────────────────────────────────
+
+
+class TestComplianceScore:
+    def test_no_assignments(self) -> None:
+        assert _compute_compliance_score(0, 0) == 100
+
+    def test_no_findings(self) -> None:
+        assert _compute_compliance_score(50, 0) == 100
+
+    def test_all_findings(self) -> None:
+        assert _compute_compliance_score(10, 10) == 0
+
+    def test_partial(self) -> None:
+        assert _compute_compliance_score(100, 13) == 87
+
+    def test_rounding(self) -> None:
+        assert _compute_compliance_score(3, 1) == 67
+
+    def test_more_findings_than_assignments(self) -> None:
+        assert _compute_compliance_score(5, 8) == 0
+
+
+# ── TestScoreColor ──────────────────────────────────────────
+
+
+class TestScoreColor:
+    def test_green(self) -> None:
+        assert _score_color(90) == "#27ae60"
+        assert _score_color(100) == "#27ae60"
+
+    def test_yellow(self) -> None:
+        assert _score_color(70) == "#f39c12"
+        assert _score_color(89) == "#f39c12"
+
+    def test_orange(self) -> None:
+        assert _score_color(50) == "#e67e22"
+        assert _score_color(69) == "#e67e22"
+
+    def test_red(self) -> None:
+        assert _score_color(0) == "#e74c3c"
+        assert _score_color(49) == "#e74c3c"
+
+
+# ── TestExecutiveSummary ────────────────────────────────────
+
+
+class TestExecutiveSummary:
+    def test_no_findings(self) -> None:
+        summary = _build_executive_summary(total_assignments=50, scope_count=3, findings_by_severity={})
+        assert "50 assignments" in summary
+        assert "3 scopes" in summary
+        assert "No findings" in summary
+
+    def test_with_findings(self) -> None:
+        summary = _build_executive_summary(
+            total_assignments=128,
+            scope_count=3,
+            findings_by_severity={"critical": 2, "high": 3, "medium": 2},
+        )
+        assert "128 assignments" in summary
+        assert "7 findings" in summary
+        assert "2 critical" in summary
+        assert "3 high" in summary
+        assert "2 medium" in summary
+
+    def test_single_scope(self) -> None:
+        summary = _build_executive_summary(total_assignments=10, scope_count=1, findings_by_severity={"low": 1})
+        assert "1 scope" in summary
+        assert "1 finding" in summary
+
+    def test_zero_assignments(self) -> None:
+        summary = _build_executive_summary(total_assignments=0, scope_count=0, findings_by_severity={})
+        assert "0 assignments" in summary
+
+
+# ── TestDonutArcs ───────────────────────────────────────────
+
+
+class TestDonutArcs:
+    def test_empty_findings(self) -> None:
+        arcs = _compute_donut_arcs({})
+        assert arcs == []
+
+    def test_single_severity(self) -> None:
+        arcs = _compute_donut_arcs({"critical": 5})
+        assert len(arcs) == 1
+        assert arcs[0].severity == "critical"
+        assert arcs[0].count == 5
+        assert arcs[0].percentage == 100.0
+        assert arcs[0].offset == 0.0
+
+    def test_two_severities(self) -> None:
+        arcs = _compute_donut_arcs({"critical": 1, "high": 3})
+        assert len(arcs) == 2
+        assert arcs[0].severity == "critical"
+        assert arcs[0].percentage == 25.0
+        assert arcs[0].offset == 0.0
+        assert arcs[1].severity == "high"
+        assert arcs[1].percentage == 75.0
+        assert arcs[1].offset == 25.0
+
+    def test_severity_order(self) -> None:
+        arcs = _compute_donut_arcs({"low": 1, "critical": 1, "medium": 1})
+        severities = [a.severity for a in arcs]
+        assert severities == ["critical", "medium", "low"]
+
+    def test_color_mapping(self) -> None:
+        arcs = _compute_donut_arcs({"critical": 1})
+        assert arcs[0].color == "#dc3545"
+
+
+# ── TestHtmlComplianceScore ──────────────────────────────────
+
+
+class TestHtmlComplianceScore:
+    def test_score_displayed_in_empty_report(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_empty_report(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "100%" in html
+        assert "compliance-score" in html
+
+    def test_score_displayed_with_findings(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        # 20 assignments, 2 findings → 90%
+        assert "90%" in html
+
+    def test_score_gauge_svg(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "<svg" in html
+        assert "stroke-dasharray" in html
+
+    def test_executive_summary_present(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "executive-summary" in html
+        assert "20 assignments" in html
+
+
+# ── TestHtmlDonutChart ───────────────────────────────────────
+
+
+class TestHtmlDonutChart:
+    def test_donut_present_with_findings(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "donut-chart" in html
+
+    def test_no_donut_without_findings(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_empty_report(), out)
+        html = out.read_text(encoding="utf-8")
+        assert '<div class="donut-chart">' not in html
+
+    def test_donut_legend(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "donut-legend" in html
+
+
+# ── TestHtmlOrphanCard ───────────────────────────────────────
+
+
+class TestHtmlOrphanCard:
+    def test_orphan_card_shown(self, tmp_path: Path) -> None:
+        report = _report_with_findings()
+        report.summary.orphan_count = 3
+        out = tmp_path / "report.html"
+        generate_html_report(report, out)
+        html = out.read_text(encoding="utf-8")
+        assert "Orphaned" in html
+
+    def test_no_orphan_card_when_zero(self, tmp_path: Path) -> None:
+        report = _report_with_findings()
+        report.summary.orphan_count = 0
+        out = tmp_path / "report.html"
+        generate_html_report(report, out)
+        html = out.read_text(encoding="utf-8")
+        assert "Orphaned" not in html
