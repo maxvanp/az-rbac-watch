@@ -215,8 +215,10 @@ Compares two snapshots and shows RBAC changes (added, removed, modified assignme
 |---|---|
 | `OLD_SNAPSHOT` | Path to the older snapshot JSON file (required) |
 | `NEW_SNAPSHOT` | Path to the newer snapshot JSON file (required) |
-| `-f, --format FORMAT` | `console` (default) or `json` |
+| `-f, --format FORMAT` | `console` (default), `json`, or `html` |
 | `-o, --output PATH` | Output file path |
+
+HTML format is auto-detected when `--output` ends with `.html`.
 
 ## Exit codes
 

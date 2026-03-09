@@ -22,7 +22,7 @@ inputs:
     description: "Management group IDs (comma-separated)"
     required: false
   format:
-    description: "Output format: console or json"
+    description: "Output format: console, json, or html (diff only)"
     required: false
     default: "console"
   output:
