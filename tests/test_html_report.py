@@ -609,3 +609,80 @@ class TestDonutArcs:
     def test_color_mapping(self) -> None:
         arcs = _compute_donut_arcs({"critical": 1})
         assert arcs[0].color == "#dc3545"
+
+
+# ── TestHtmlComplianceScore ──────────────────────────────────
+
+
+class TestHtmlComplianceScore:
+    def test_score_displayed_in_empty_report(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_empty_report(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "100%" in html
+        assert "compliance-score" in html
+
+    def test_score_displayed_with_findings(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        # 20 assignments, 2 findings → 90%
+        assert "90%" in html
+
+    def test_score_gauge_svg(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "<svg" in html
+        assert "stroke-dasharray" in html
+
+    def test_executive_summary_present(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "executive-summary" in html
+        assert "20 assignments" in html
+
+
+# ── TestHtmlDonutChart ───────────────────────────────────────
+
+
+class TestHtmlDonutChart:
+    def test_donut_present_with_findings(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "donut-chart" in html
+
+    def test_no_donut_without_findings(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_empty_report(), out)
+        html = out.read_text(encoding="utf-8")
+        assert '<div class="donut-chart">' not in html
+
+    def test_donut_legend(self, tmp_path: Path) -> None:
+        out = tmp_path / "report.html"
+        generate_html_report(_report_with_findings(), out)
+        html = out.read_text(encoding="utf-8")
+        assert "donut-legend" in html
+
+
+# ── TestHtmlOrphanCard ───────────────────────────────────────
+
+
+class TestHtmlOrphanCard:
+    def test_orphan_card_shown(self, tmp_path: Path) -> None:
+        report = _report_with_findings()
+        report.summary.orphan_count = 3
+        out = tmp_path / "report.html"
+        generate_html_report(report, out)
+        html = out.read_text(encoding="utf-8")
+        assert "Orphaned" in html
+
+    def test_no_orphan_card_when_zero(self, tmp_path: Path) -> None:
+        report = _report_with_findings()
+        report.summary.orphan_count = 0
+        out = tmp_path / "report.html"
+        generate_html_report(report, out)
+        html = out.read_text(encoding="utf-8")
+        assert "Orphaned" not in html
