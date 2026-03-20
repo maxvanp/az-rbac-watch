@@ -1,0 +1,223 @@
+framework:
+  name: "CIS Microsoft Azure Foundations Benchmark"
+  version: "1.4.0"
+  section: "Identity and Access Management"
+
+controls:
+  - id: "CIS-1.1"
+    title: "Ensure that multi-factor authentication is enabled for all privileged users"
+    description: >
+      Enable multi-factor authentication for all users who have write access
+      to Azure resources. MFA requires a user to present two or more forms
+      of authentication.
+    severity: critical
+    rule_names: []
+    remediation: >
+      Enable MFA via Entra ID Conditional Access policies for all privileged users.
+      This control requires Entra ID configuration and cannot be automated via RBAC scanning.
+
+  - id: "CIS-1.2"
+    title: "Ensure that no more than 3 owners are assigned per subscription"
+    description: >
+      The Azure portal and Azure Resource Manager APIs allow you to manage
+      subscription-level RBAC permissions. Having too many owners at the
+      subscription level violates the principle of least privilege and
+      increases the blast radius of a compromised account.
+    severity: critical
+    rule_names:
+      - cis-1-2-max-owners
+    remediation: >
+      Remove excess Owner role assignments at the subscription level.
+      Consider using more granular roles (Contributor, specific resource roles).
+
+  - id: "CIS-1.3"
+    title: "Ensure that no more than 3 owners are assigned per management group"
+    description: >
+      Management groups provide a level of scope above subscriptions.
+      Having too many owners at this level is a significant risk as
+      permissions cascade to all child subscriptions.
+    severity: critical
+    rule_names:
+      - cis-1-3-max-owners-mg
+    remediation: >
+      Remove excess Owner role assignments at the management group level.
+      Use more granular roles and limit Owner to break-glass accounts.
+
+  - id: "CIS-1.4"
+    title: "Ensure that guest users do not have Owner role"
+    description: >
+      Guest users should not be assigned the Owner role on any Azure resource.
+      Guest accounts are typically external identities with less oversight
+      and represent a higher risk for privilege escalation.
+    severity: high
+    rule_names:
+      - cis-1-4-no-guest-owners
+    remediation: >
+      Remove Owner role from guest users. Assign appropriate scoped roles
+      (e.g. Contributor or Reader) instead.
+
+  - id: "CIS-1.5"
+    title: "Ensure that no custom subscription owner roles are created"
+    description: >
+      Custom roles with subscription-level Owner-equivalent permissions
+      bypass the built-in governance controls. Subscription owners should
+      use the built-in Owner role for auditability.
+    severity: high
+    rule_names:
+      - cis-1-5-no-custom-owner-roles
+    remediation: >
+      Delete custom roles that grant full subscription control.
+      Use the built-in Owner role or create more restrictive custom roles.
+
+  - id: "CIS-1.6"
+    title: "Ensure that no custom subscription owner roles exist at management group level"
+    description: >
+      Custom roles with Owner-equivalent permissions at the management group
+      level cascade to all child subscriptions and are difficult to audit.
+    severity: high
+    rule_names:
+      - cis-1-6-no-custom-owner-roles-mg
+    remediation: >
+      Remove custom roles with full control at management group scope.
+      Use built-in roles with appropriate scope boundaries.
+
+  - id: "CIS-1.7"
+    title: "Ensure that guest users do not have administrative roles"
+    description: >
+      Guest users should not hold administrative roles (Contributor, User
+      Access Administrator, or any write-capable role). External identities
+      should have the minimum access required.
+    severity: high
+    rule_names:
+      - cis-1-7-no-guest-admins
+    remediation: >
+      Remove administrative roles from guest users. Assign Reader or
+      custom read-only roles as needed.
+
+  - id: "CIS-1.8"
+    title: "Ensure that no expired credentials exist on application registrations"
+    description: >
+      Application registrations with expired secrets or certificates may
+      indicate abandoned applications that still have active permissions.
+    severity: medium
+    rule_names: []
+    remediation: >
+      Review app registrations for expired credentials via Entra ID.
+      This control requires Graph API access and cannot be automated via RBAC scanning.
+
+  - id: "CIS-1.9"
+    title: "Ensure that account-level SAS tokens are not used for storage"
+    description: >
+      Account-level SAS tokens grant broad access to storage accounts.
+      Service-level SAS tokens or RBAC should be used instead.
+    severity: medium
+    rule_names: []
+    remediation: >
+      Migrate from account SAS to service-level SAS or Azure RBAC for storage access.
+      This control is outside the scope of RBAC assignment scanning.
+
+  - id: "CIS-1.10"
+    title: "Ensure that users cannot add gallery applications"
+    description: >
+      Restricting users from adding gallery apps limits the attack surface
+      from third-party OAuth applications.
+    severity: medium
+    rule_names: []
+    remediation: >
+      Configure Entra ID to restrict gallery app consent.
+      This is an Entra ID tenant setting, not automatable via RBAC scanning.
+
+  - id: "CIS-1.11"
+    title: "Ensure that users cannot register applications"
+    description: >
+      Restricting application registration limits the creation of service
+      principals that could be used for lateral movement.
+    severity: medium
+    rule_names: []
+    remediation: >
+      Disable user application registration in Entra ID settings.
+      This is an Entra ID tenant setting, not automatable via RBAC scanning.
+
+  - id: "CIS-1.12"
+    title: "Ensure that guest user access is restricted"
+    description: >
+      Guest users should have limited access to directory data. By default,
+      guest users can enumerate all users and groups which may expose
+      organizational structure.
+    severity: medium
+    rule_names: []
+    remediation: >
+      Restrict guest user permissions in Entra ID external collaboration settings.
+      This is an Entra ID tenant setting, not automatable via RBAC scanning.
+
+  - id: "CIS-1.13"
+    title: "Ensure that service principal credentials are rotated regularly"
+    description: >
+      Service principal credentials (secrets and certificates) should be
+      rotated on a regular schedule to limit the impact of credential theft.
+    severity: medium
+    rule_names: []
+    remediation: >
+      Implement credential rotation policies for service principals via Graph API.
+      This control requires Graph API access and cannot be automated via RBAC scanning.
+
+# Governance rules that implement the automatable controls above.
+# Users can merge these into their existing policy YAML.
+governance_rules:
+  - name: cis-1-2-max-owners
+    type: governance
+    severity: critical
+    description: "More than 3 Owner assignments at subscription level (CIS 1.2)"
+    match:
+      role: "Owner"
+      scope_prefix: "/subscriptions/"
+      principal_type_in: ["User", "Group", "ServicePrincipal"]
+      max_assignments: 3
+    remediation: "Reduce Owner assignments to max 3 per subscription. Use more granular roles."
+
+  - name: cis-1-3-max-owners-mg
+    type: governance
+    severity: critical
+    description: "More than 3 Owner assignments at management group level (CIS 1.3)"
+    match:
+      role: "Owner"
+      scope_prefix: "/providers/Microsoft.Management/managementGroups/"
+      principal_type_in: ["User", "Group", "ServicePrincipal"]
+      max_assignments: 3
+    remediation: "Reduce Owner assignments to max 3 per management group. Limit Owner to break-glass accounts."
+
+  - name: cis-1-4-no-guest-owners
+    type: governance
+    severity: high
+    description: "Guest user assigned Owner role (CIS 1.4)"
+    match:
+      role: "Owner"
+      principal_type: "Guest"
+    remediation: "Remove Owner role from guest users. Assign appropriate scoped roles instead."
+
+  - name: cis-1-5-no-custom-owner-roles
+    type: governance
+    severity: high
+    description: "Custom role with Owner-equivalent permissions at subscription scope (CIS 1.5)"
+    match:
+      role_type: "CustomRole"
+      scope_prefix: "/subscriptions/"
+    remediation: "Delete custom roles that grant full subscription control. Use built-in Owner or more restrictive custom roles."
+
+  - name: cis-1-6-no-custom-owner-roles-mg
+    type: governance
+    severity: high
+    description: "Custom role with Owner-equivalent permissions at management group scope (CIS 1.6)"
+    match:
+      role_type: "CustomRole"
+      scope_prefix: "/providers/Microsoft.Management/managementGroups/"
+    remediation: "Remove custom roles with full control at management group scope."
+
+  - name: cis-1-7-no-guest-admins
+    type: governance
+    severity: high
+    description: "Guest user with administrative role (CIS 1.7)"
+    match:
+      principal_type: "Guest"
+      role_in: ["Contributor", "User Access Administrator", "Owner"]
+    remediation: "Remove administrative roles from guest users. Assign Reader or custom read-only roles."

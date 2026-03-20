@@ -47,7 +47,7 @@ from az_rbac_watch.reporters.console_report import (
     print_discover_summary,
     print_drift_report,
 )
-from az_rbac_watch.reporters.html_report import generate_html_report
+from az_rbac_watch.reporters.html_report import generate_framework_html_report, generate_html_report
 from az_rbac_watch.reporters.json_report import generate_json_report
 from az_rbac_watch.scanner.discovery import discover_policy
 from az_rbac_watch.scanner.rbac_scanner import RbacScanResult, resolve_display_names, scan_rbac
@@ -324,6 +324,50 @@ def _load_or_build_model(
         model = model.model_copy(update={"rules": list(model.rules) + list(DEFAULT_GOVERNANCE_RULES)})
         n = len(DEFAULT_GOVERNANCE_RULES)
         console.print(f"[bold yellow]Ad-hoc mode: {n} default governance rule(s) loaded.[/bold yellow]")
+
+    return model
+
+
+def _inject_framework_rules(model: PolicyModel, framework_name: str | None) -> PolicyModel:
+    """Inject governance rules from a framework's YAML into the policy model.
+
+    Only adds rules whose names are not already present in the model.
+    """
+    if framework_name is None:
+        return model
+
+    # Load the raw YAML to get governance_rules section
+    from pathlib import Path as _Path
+
+    import yaml as _yaml
+
+    builtin_map = {"CIS": "cis_azure_1_4_0.yaml"}
+    upper = framework_name.upper()
+    if upper in builtin_map:
+        yaml_path = _Path(__file__).parent / "frameworks" / builtin_map[upper]
+    else:
+        yaml_path = _Path(framework_name)
+
+    if not yaml_path.exists():
+        return model
+
+    raw = yaml_path.read_text(encoding="utf-8")
+    data = _yaml.safe_load(raw)
+    gov_rules_data = data.get("governance_rules", [])
+    if not gov_rules_data:
+        return model
+
+    from az_rbac_watch.config.policy_model import Rule
+
+    existing_names = {r.name for r in model.rules}
+    new_rules = []
+    for rd in gov_rules_data:
+        if rd.get("name") not in existing_names:
+            new_rules.append(Rule.model_validate(rd))
+
+    if new_rules:
+        console.print(f"[dim]Injected {len(new_rules)} framework governance rule(s).[/dim]")
+        return model.model_copy(update={"rules": list(model.rules) + new_rules})
 
     return model
 
@@ -694,6 +738,10 @@ def audit(
         bool,
         typer.Option("--debug", help="Show full traceback on error."),
     ] = False,
+    framework: Annotated[
+        str | None,
+        typer.Option("--framework", help="Map findings to a compliance framework (e.g. 'CIS' or path to YAML)."),
+    ] = None,
 ) -> None:
     """Audit guardrails — check governance rules (forbidden patterns).
 
@@ -713,6 +761,21 @@ def audit(
         console.print(f"[bold red]Error[/bold red]: Unknown format '{fmt}'. Use 'console' or 'json'.")
         raise typer.Exit(code=2)
 
+    # Load framework definition early to fail fast
+    fw_definition = None
+    if framework is not None:
+        from az_rbac_watch.frameworks.mapper import load_framework_definition
+
+        try:
+            fw_definition = load_framework_definition(framework)
+            console.print(
+                f"[dim]Framework: {fw_definition.name} v{fw_definition.version} "
+                f"({len(fw_definition.controls)} controls)[/dim]"
+            )
+        except (FileNotFoundError, ValueError) as e:
+            console.print(f"[bold red]Error[/bold red]: {e}")
+            raise typer.Exit(code=2) from None
+
     if not dry_run:
         _check_credentials_or_exit()
 
@@ -723,6 +786,11 @@ def audit(
         tenant_id=tenant_id,
         inject_default_governance=True,
     )
+
+    # When using a framework, inject the framework's governance rules into the model
+    if fw_definition is not None:
+        model = _inject_framework_rules(model, framework)
+
     model = _resolve_and_filter_model(model, exclude_subscription, exclude_management_group)
     _validate_scopes_or_exit(model)
 
@@ -753,17 +821,54 @@ def audit(
     # Audit violations
     report = check_violations(model, scan_result)
 
-    _output_report(
-        report,
-        fmt=fmt,
-        output=output,
-        model=model,
-        console_printer=print_audit_report,
-        html_mode="audit",
-    )
+    # Framework mapping (if requested)
+    if fw_definition is not None and output is not None:
+        from az_rbac_watch.frameworks.mapper import FrameworkMapper
+
+        mapper = FrameworkMapper(fw_definition)
+        fw_report = mapper.map_report(report)
+        generate_framework_html_report(fw_report, output)
+        console.print(f"Framework compliance report generated: [bold]{output}[/bold]")
+
+        # Also print console summary
+        output_console = Console(no_color=_no_color_mode)
+        print_audit_report(report, console=output_console)
+
+        console.print(
+            f"\n[dim]Framework: {fw_definition.name} v{fw_definition.version}\n"
+            f"  Score: {fw_report.compliance_score}% "
+            f"({fw_report.passing_controls}/{fw_report.passing_controls + fw_report.failing_controls} "
+            f"controls passing)[/dim]"
+        )
+    elif fw_definition is not None:
+        # Framework requested but no output file — print console report + framework summary
+        from az_rbac_watch.frameworks.mapper import FrameworkMapper
+
+        mapper = FrameworkMapper(fw_definition)
+        fw_report = mapper.map_report(report)
+
+        output_console = Console(no_color=_no_color_mode)
+        print_audit_report(report, console=output_console)
+
+        console.print(
+            f"\n[dim]Framework: {fw_definition.name} v{fw_definition.version}\n"
+            f"  Score: {fw_report.compliance_score}% "
+            f"({fw_report.passing_controls}/{fw_report.passing_controls + fw_report.failing_controls} "
+            f"controls passing)\n"
+            f"  Use --output report.html to generate the full framework compliance report.[/dim]"
+        )
+    else:
+        _output_report(
+            report,
+            fmt=fmt,
+            output=output,
+            model=model,
+            console_printer=print_audit_report,
+            html_mode="audit",
+        )
 
     # Next steps footer (console only)
-    if fmt == "console" and policy is None:
+    if fmt == "console" and policy is None and framework is None:
         console.print(
             "\n[dim]Next steps:\n"
             "  az-rbac-watch discover -o policy.yaml  # capture current state\n"

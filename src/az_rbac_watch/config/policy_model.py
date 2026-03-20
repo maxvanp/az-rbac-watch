@@ -78,6 +78,7 @@ class RuleMatch(BaseModel):
     principal_name_not_prefix: str | None = None
     principal_name_contains: str | None = None
     principal_name_not_contains: str | None = None
+    max_assignments: int | None = None
 
     @model_validator(mode="after")
     def _warn_contradictory_operators(self) -> RuleMatch:

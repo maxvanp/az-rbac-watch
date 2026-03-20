@@ -1546,3 +1546,213 @@ class TestOrphanSummaryCount:
         report = check_violations(policy, scan_result)
         # The orphan finding should be in orphan_count, not violation_count
         assert report.summary.orphan_count == 1
+
+
+# ── TestMaxAssignments (aggregation rules) ────────────────────
+
+
+class TestMaxAssignments:
+    """Tests for the max_assignments aggregation feature."""
+
+    def test_under_threshold_no_finding(self):
+        """3 Owners at a subscription with max_assignments=3 → no finding."""
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "max-3-owners",
+                    "severity": "critical",
+                    "match": {
+                        "role": "Owner",
+                        "scope_prefix": f"/subscriptions/{VALID_SUB_ID}",
+                        "max_assignments": 3,
+                    },
+                },
+            ],
+        )
+        scan = make_scan_result(
+            [
+                make_assignment(role_name="Owner", principal_id="aaa", assignment_id="a1"),
+                make_assignment(role_name="Owner", principal_id="bbb", assignment_id="a2"),
+                make_assignment(role_name="Owner", principal_id="ccc", assignment_id="a3"),
+            ]
+        )
+        report = check_violations(policy, scan)
+        assert len(report.findings) == 0
+
+    def test_over_threshold_fires(self):
+        """4 Owners at a subscription with max_assignments=3 → 1 finding."""
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "max-3-owners",
+                    "severity": "critical",
+                    "match": {
+                        "role": "Owner",
+                        "scope_prefix": f"/subscriptions/{VALID_SUB_ID}",
+                        "max_assignments": 3,
+                    },
+                },
+            ],
+        )
+        scan = make_scan_result(
+            [
+                make_assignment(role_name="Owner", principal_id="aaa", assignment_id="a1"),
+                make_assignment(role_name="Owner", principal_id="bbb", assignment_id="a2"),
+                make_assignment(role_name="Owner", principal_id="ccc", assignment_id="a3"),
+                make_assignment(role_name="Owner", principal_id="ddd", assignment_id="a4"),
+            ]
+        )
+        report = check_violations(policy, scan)
+        findings = [f for f in report.findings if f.rule_id == "max-3-owners"]
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.CRITICAL
+        assert "4" in findings[0].message
+        assert findings[0].details["count"] == "4"
+        assert findings[0].details["threshold"] == "3"
+
+    def test_different_scopes_counted_separately(self):
+        """Owners at different scopes → each scope counted independently."""
+        sub2 = "33333333-3333-3333-3333-333333333333"
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "max-2-owners",
+                    "severity": "critical",
+                    "match": {
+                        "role": "Owner",
+                        "max_assignments": 2,
+                    },
+                },
+            ],
+        )
+        scan = make_scan_result(
+            [
+                # 3 at sub1 → should fire
+                make_assignment(
+                    role_name="Owner",
+                    principal_id="aaa",
+                    assignment_id="a1",
+                    scope=f"/subscriptions/{VALID_SUB_ID}",
+                ),
+                make_assignment(
+                    role_name="Owner",
+                    principal_id="bbb",
+                    assignment_id="a2",
+                    scope=f"/subscriptions/{VALID_SUB_ID}",
+                ),
+                make_assignment(
+                    role_name="Owner",
+                    principal_id="ccc",
+                    assignment_id="a3",
+                    scope=f"/subscriptions/{VALID_SUB_ID}",
+                ),
+                # 1 at sub2 → should not fire
+                make_assignment(
+                    role_name="Owner",
+                    principal_id="ddd",
+                    assignment_id="a4",
+                    scope=f"/subscriptions/{sub2}",
+                ),
+            ]
+        )
+        report = check_violations(policy, scan)
+        findings = [f for f in report.findings if f.rule_id == "max-2-owners"]
+        assert len(findings) == 1
+        assert VALID_SUB_ID in findings[0].scope.lower()
+
+    def test_non_matching_role_ignored(self):
+        """Non-matching assignments don't count toward the threshold."""
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "max-1-owner",
+                    "severity": "critical",
+                    "match": {
+                        "role": "Owner",
+                        "max_assignments": 1,
+                    },
+                },
+            ],
+        )
+        scan = make_scan_result(
+            [
+                make_assignment(role_name="Owner", principal_id="aaa", assignment_id="a1"),
+                make_assignment(role_name="Reader", principal_id="bbb", assignment_id="a2"),
+                make_assignment(role_name="Contributor", principal_id="ccc", assignment_id="a3"),
+            ]
+        )
+        report = check_violations(policy, scan)
+        findings = [f for f in report.findings if f.rule_id == "max-1-owner"]
+        assert len(findings) == 0
+
+    def test_max_assignments_zero_always_fires(self):
+        """max_assignments=0 fires on any matching assignment."""
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "no-owners-allowed",
+                    "severity": "critical",
+                    "match": {
+                        "role": "Owner",
+                        "max_assignments": 0,
+                    },
+                },
+            ],
+        )
+        scan = make_scan_result(
+            [
+                make_assignment(role_name="Owner", principal_id="aaa", assignment_id="a1"),
+            ]
+        )
+        report = check_violations(policy, scan)
+        findings = [f for f in report.findings if f.rule_id == "no-owners-allowed"]
+        assert len(findings) == 1
+
+    def test_max_assignments_with_principal_type_filter(self):
+        """max_assignments combined with principal_type_in filter."""
+        policy = make_policy(
+            rules=[
+                {
+                    "name": "max-2-user-owners",
+                    "severity": "critical",
+                    "match": {
+                        "role": "Owner",
+                        "principal_type_in": ["User"],
+                        "max_assignments": 2,
+                    },
+                },
+            ],
+        )
+        scan = make_scan_result(
+            [
+                make_assignment(
+                    role_name="Owner",
+                    principal_type=PrincipalType.USER,
+                    principal_id="aaa",
+                    assignment_id="a1",
+                ),
+                make_assignment(
+                    role_name="Owner",
+                    principal_type=PrincipalType.USER,
+                    principal_id="bbb",
+                    assignment_id="a2",
+                ),
+                make_assignment(
+                    role_name="Owner",
+                    principal_type=PrincipalType.USER,
+                    principal_id="ccc",
+                    assignment_id="a3",
+                ),
+                # SP owners don't count
+                make_assignment(
+                    role_name="Owner",
+                    principal_type=PrincipalType.SERVICE_PRINCIPAL,
+                    principal_id="ddd",
+                    assignment_id="a4",
+                ),
+            ]
+        )
+        report = check_violations(policy, scan)
+        findings = [f for f in report.findings if f.rule_id == "max-2-user-owners"]
+        assert len(findings) == 1
+        assert "3" in findings[0].details["count"]

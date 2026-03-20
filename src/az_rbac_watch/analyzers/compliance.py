@@ -31,6 +31,7 @@ __all__ = [
     "ComplianceReport",
     "ComplianceSummary",
     "Severity",
+    "_check_aggregation_rules",
     "_check_orphans",
     "check_compliance",
     "check_drift",
@@ -201,8 +202,12 @@ def _check_governance_rules(
     if not rules:
         return []
 
+    # Separate aggregation rules (max_assignments) from per-assignment rules
+    aggregation_rules = [r for r in rules if r.match.max_assignments is not None]
+    per_assignment_rules = [r for r in rules if r.match.max_assignments is None]
+
     # Pre-compute lowered sets once per rule
-    precomputed = [_PrecomputedMatch(rule) for rule in rules]
+    precomputed = [_PrecomputedMatch(rule) for rule in per_assignment_rules]
 
     findings: list[ComplianceFinding] = []
 
@@ -232,6 +237,75 @@ def _check_governance_rules(
                         details=details,
                     )
                 )
+
+    # Process aggregation rules (max_assignments per scope)
+    findings.extend(_check_aggregation_rules(aggregation_rules, assignments))
+
+    return findings
+
+
+def _check_aggregation_rules(
+    rules: list[Rule],
+    assignments: list[ScannedRoleAssignment],
+) -> list[ComplianceFinding]:
+    """Evaluate aggregation rules — fire when matching assignment count exceeds threshold per scope."""
+    if not rules:
+        return []
+
+    findings: list[ComplianceFinding] = []
+
+    for rule in rules:
+        threshold = rule.match.max_assignments
+        if threshold is None:
+            continue
+
+        pc = _PrecomputedMatch(rule)
+
+        # Collect matching assignments grouped by scope
+        scope_groups: dict[str, list[ScannedRoleAssignment]] = {}
+        for a in assignments:
+            if a.role_name is None:
+                continue
+            if _evaluate_match(pc.match, a, pc):
+                scope_key = a.scope.lower().rstrip("/")
+                scope_groups.setdefault(scope_key, []).append(a)
+
+        # Only fire for scopes where count exceeds threshold
+        for _scope_key, matched in scope_groups.items():
+            if len(matched) <= threshold:
+                continue
+
+            details: dict[str, str] = {
+                "count": str(len(matched)),
+                "threshold": str(threshold),
+            }
+            if rule.remediation:
+                details["remediation"] = rule.remediation
+
+            # Use the original scope casing from the first match
+            scope_display = matched[0].scope
+            principals = ", ".join(
+                a.principal_display_name or a.principal_id for a in matched
+            )
+
+            findings.append(
+                ComplianceFinding(
+                    rule_id=rule.name,
+                    severity=Severity(rule.severity),
+                    message=(
+                        f"{rule.description or rule.name}: "
+                        f"{len(matched)} assignments at {scope_display} "
+                        f"(max {threshold}): {principals}"
+                    ),
+                    assignment_id=matched[0].id,
+                    scope=scope_display,
+                    principal_id="",
+                    principal_display_name="",
+                    principal_type="",
+                    role_name=matched[0].role_name or "",
+                    details=details,
+                )
+            )
 
     return findings
 

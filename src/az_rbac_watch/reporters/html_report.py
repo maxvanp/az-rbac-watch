@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from jinja2 import Environment
 
@@ -25,7 +25,10 @@ from az_rbac_watch.analyzers.compliance import (
 from az_rbac_watch.utils.portal_links import build_principal_url, build_scope_url
 from az_rbac_watch.utils.scope import scope_group_key
 
-__all__ = ["ScopeGroup", "generate_html_report"]
+if TYPE_CHECKING:
+    from az_rbac_watch.frameworks.models import FrameworkComplianceReport
+
+__all__ = ["ScopeGroup", "generate_framework_html_report", "generate_html_report"]
 
 ReportMode = Literal["scan", "audit", "combined"]
 
@@ -650,6 +653,305 @@ def generate_html_report(
         score=score,
         score_color=score_clr,
         executive_summary=exec_summary,
+        donut_arcs=donut_arcs,
+    )
+
+    output_path.write_text(html, encoding="utf-8")
+
+
+# ── Framework Compliance Report ────────────────────────────
+
+_FRAMEWORK_HTML_TEMPLATE = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ framework.name }} v{{ framework.version }} — Compliance Report</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #f5f6fa; color: #2d3436;
+    line-height: 1.6;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 1.6rem; margin: 0 0 8px; }
+  .header {
+    background: linear-gradient(135deg, #0078d4, #005a9e);
+    color: #fff; padding: 32px 24px; border-radius: 8px; margin-bottom: 24px;
+  }
+  .header p { margin: 4px 0; opacity: 0.9; font-size: 0.95rem; }
+  .header-content { display: flex; align-items: center; gap: 32px; }
+  .header-text { flex: 1; }
+  .compliance-score { text-align: center; flex-shrink: 0; }
+  .compliance-score .score-label { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; }
+  .executive-summary {
+    background: rgba(255,255,255,0.1); border-radius: 6px;
+    padding: 12px 16px; margin-top: 12px; font-size: 0.9rem; opacity: 0.95;
+  }
+  .cards { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  .card {
+    flex: 1; min-width: 150px; background: #fff; border-radius: 8px;
+    padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); text-align: center;
+  }
+  .card .value { font-size: 2rem; font-weight: 700; }
+  .card .label { font-size: 0.85rem; color: #636e72; margin-top: 4px; }
+  .section {
+    background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    padding: 24px; margin-bottom: 24px;
+  }
+  .section h2 { font-size: 1.2rem; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 10px 12px; background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6; font-size: 0.85rem;
+    text-transform: uppercase; color: #636e72;
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+  tr:hover { background: #f8f9fa; }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 4px;
+    color: #fff; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+  }
+  .badge-pass { background: #27ae60; }
+  .badge-fail { background: #e74c3c; }
+  .badge-manual { background: #6c757d; }
+  .severity-critical { background: #dc3545; }
+  .severity-high { background: #e74c3c; }
+  .severity-medium { background: #f39c12; }
+  .severity-low { background: #17a2b8; }
+  .severity-info { background: #6c757d; }
+  .control-detail {
+    background: #f8f9fa; border-radius: 6px; padding: 16px; margin: 8px 0 16px;
+  }
+  .control-detail p { margin: 4px 0; font-size: 0.9rem; }
+  .control-detail table td { word-break: break-all; }
+  .remediation { font-size: 0.85rem; color: #636e72; font-style: italic; margin-top: 8px; }
+  details { margin-bottom: 8px; }
+  details summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
+  details summary:hover { color: #0078d4; }
+  .stats-row { display: flex; gap: 24px; margin-bottom: 24px; align-items: flex-start; flex-wrap: wrap; }
+  .donut-chart { flex-shrink: 0; text-align: center; }
+  .donut-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; justify-content: center; }
+  .donut-legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: #636e72; }
+  .donut-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .footer { text-align: center; font-size: 0.8rem; color: #b2bec3; padding: 16px 0; }
+  @media print {
+    body { background: #fff; }
+    .section { box-shadow: none; border: 1px solid #dee2e6; }
+    .header { break-after: avoid; }
+    details[open] { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1>{{ framework.name }}</h1>
+        <p>Version : {{ framework.version }}</p>
+        <p>Section : {{ framework.section }}</p>
+        <p>Tenant  : {{ tenant_id }}</p>
+        <p>Scan    : {{ scan_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}</p>
+      </div>
+      <div class="compliance-score">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff33" stroke-width="8"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="{{ score_color }}" stroke-width="8"
+            stroke-dasharray="{{ score * 2.51327 }} {{ 251.327 - score * 2.51327 }}"
+            stroke-dashoffset="62.83" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          <text x="50" y="50" text-anchor="middle" dominant-baseline="central"
+            fill="#fff" font-size="22" font-weight="700">{{ score }}%</text>
+        </svg>
+        <div class="score-label">Compliance</div>
+      </div>
+    </div>
+    <div class="executive-summary">{{ executive_summary }}</div>
+  </div>
+
+  <div class="stats-row">
+    {% if donut_arcs %}
+    <div class="donut-chart">
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        {% for arc in donut_arcs %}
+        <circle cx="70" cy="70" r="50" fill="none" stroke="{{ arc.color }}" stroke-width="20"
+          stroke-dasharray="{{ arc.percentage * 3.14159 }} {{ 314.159 - arc.percentage * 3.14159 }}"
+          stroke-dashoffset="{{ -arc.offset * 3.14159 }}"
+          transform="rotate(-90 70 70)"/>
+        {% endfor %}
+      </svg>
+      <div class="donut-legend">
+        {% for arc in donut_arcs %}
+        <span class="donut-legend-item">
+          <span class="donut-legend-dot" style="background:{{ arc.color }}"></span>
+          {{ arc.count }} {{ arc.severity | upper }}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="cards">
+      <div class="card">
+        <div class="value">{{ total_controls }}</div>
+        <div class="label">Total controls</div>
+      </div>
+      <div class="card">
+        <div class="value" style="color: #27ae60">{{ passing_controls }}</div>
+        <div class="label">Passing</div>
+      </div>
+      <div class="card">
+        <div class="value" style="color: {{ '#e74c3c' if failing_controls else '#27ae60' }}">{{ failing_controls }}</div>
+        <div class="label">Failing</div>
+      </div>
+      <div class="card">
+        <div class="value" style="color: #6c757d">{{ manual_controls }}</div>
+        <div class="label">Manual review</div>
+      </div>
+      <div class="card">
+        <div class="value" style="color: {{ '#e74c3c' if total_findings else '#27ae60' }}">{{ total_findings }}</div>
+        <div class="label">Total findings</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Controls</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>ID</th>
+          <th>Title</th>
+          <th>Severity</th>
+          <th>Findings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cr in control_results %}
+        <tr>
+          <td>
+            {% if cr.status == "pass" %}
+              <span class="badge badge-pass">PASS</span>
+            {% elif cr.status == "fail" %}
+              <span class="badge badge-fail">FAIL</span>
+            {% else %}
+              <span class="badge badge-manual">MANUAL</span>
+            {% endif %}
+          </td>
+          <td>{{ cr.control.id }}</td>
+          <td>{{ cr.control.title }}</td>
+          <td><span class="badge severity-{{ cr.control.severity }}">{{ cr.control.severity | upper }}</span></td>
+          <td>{{ cr.finding_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% for cr in control_results %}
+  {% if cr.status == "fail" %}
+  <div class="section" id="control-{{ cr.control.id }}">
+    <h2>
+      <span class="badge badge-fail">FAIL</span>
+      {{ cr.control.id }} — {{ cr.control.title }}
+    </h2>
+    <p>{{ cr.control.description }}</p>
+    {% if cr.findings %}
+    <table>
+      <thead>
+        <tr>
+          <th>Principal</th>
+          <th>Type</th>
+          <th>Role</th>
+          <th>Scope</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in cr.findings %}
+        <tr>
+          <td>
+            {%- if f.principal_display_name -%}
+              {{ f.principal_display_name }}<br><small>{{ f.principal_id }}</small>
+            {%- else -%}
+              {{ f.principal_id }}
+            {%- endif -%}
+          </td>
+          <td>{{ f.principal_type }}</td>
+          <td>{{ f.role_name }}</td>
+          <td title="{{ f.scope }}">{{ truncate_scope(f.scope) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% if cr.control.remediation %}
+    <div class="remediation">{{ cr.control.remediation }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  <div class="footer">
+    {{ framework.name }} v{{ framework.version }} — generated on {{ scan_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+  </div>
+</div>
+</body>
+</html>
+"""
+
+
+def generate_framework_html_report(
+    fw_report: "FrameworkComplianceReport",
+    output_path: Path,
+) -> None:
+    """Generate a framework compliance HTML report (single-file, CSS inline).
+
+    Args:
+        fw_report: The framework compliance report to export.
+        output_path: Path of the HTML file to create.
+    """
+    from az_rbac_watch.frameworks.models import FrameworkComplianceReport  # noqa: F811
+
+    score = fw_report.compliance_score
+    score_clr = _score_color(score)
+
+    manual_controls = sum(1 for r in fw_report.control_results if r.status == "manual")
+
+    auto_total = fw_report.passing_controls + fw_report.failing_controls
+    exec_parts = [
+        f"{fw_report.passing_controls}/{auto_total} automatable controls passing.",
+    ]
+    if manual_controls > 0:
+        exec_parts.append(f"{manual_controls} controls require manual review.")
+    if fw_report.total_findings > 0:
+        exec_parts.append(f"{fw_report.total_findings} finding(s) detected.")
+    else:
+        exec_parts.append("No findings detected.")
+    executive_summary = " ".join(exec_parts)
+
+    donut_arcs = _compute_donut_arcs(fw_report.findings_by_severity)
+
+    env = Environment(autoescape=True)
+    env.globals["truncate_scope"] = _truncate_scope
+    template = env.from_string(_FRAMEWORK_HTML_TEMPLATE)
+
+    html = template.render(
+        framework=fw_report.framework,
+        tenant_id=fw_report.tenant_id,
+        scan_timestamp=fw_report.scan_timestamp,
+        score=score,
+        score_color=score_clr,
+        executive_summary=executive_summary,
+        control_results=fw_report.control_results,
+        total_controls=fw_report.total_controls,
+        passing_controls=fw_report.passing_controls,
+        failing_controls=fw_report.failing_controls,
+        manual_controls=manual_controls,
+        total_findings=fw_report.total_findings,
         donut_arcs=donut_arcs,
     )
 
