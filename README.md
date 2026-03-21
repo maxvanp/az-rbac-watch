@@ -84,6 +84,16 @@ az-rbac-watch audit -p my_policy.yaml --format json
 
 A starter kit with common governance rules is available in [`examples/deny_rules_starter.yaml`](examples/deny_rules_starter.yaml).
 
+### 4b. Framework compliance (CIS Benchmark)
+
+```bash
+# Audit with CIS Azure Foundations Benchmark mapping
+az-rbac-watch audit -p my_policy.yaml --framework CIS -o compliance.html
+
+# Console summary only
+az-rbac-watch audit -p my_policy.yaml --framework CIS
+```
+
 ### 5. Validate policy syntax (offline)
 
 ```bash
@@ -117,6 +127,7 @@ az-rbac-watch diff snapshot_old.json snapshot_new.json --format json -o changes.
 | RBAC as Code | `scan` | `baseline` | `DRIFT` | "Is there something I didn't declare?" |
 | Policy as Code | `audit` | `governance` | `GOVERNANCE_VIOLATION` | "Is there something forbidden?" |
 | Change tracking | `snapshot` + `diff` | n/a | Added / Removed / Modified | "What changed since last time?" |
+| Framework compliance | `audit --framework` | `governance` | `GOVERNANCE_VIOLATION` + score | "How do we score against CIS?" |
 
 You can use both in the same policy file. Each command focuses on its rule type and ignores the other.
 
@@ -171,6 +182,7 @@ Checks governance guardrails — evaluates governance rules against actual state
 | `-o, --output PATH` | HTML report output path |
 | `-f, --format FORMAT` | `console` (default) or `json` |
 | `--dry-run` | Show scan plan without making API calls |
+| `--framework NAME` | Map findings to compliance framework (e.g. 'CIS' or path to YAML) |
 | `--exclude-subscription ID` | Exclude subscription (repeatable) |
 | `--exclude-management-group ID` | Exclude management group (repeatable) |
 | `-v, --verbose` | Debug logging |
