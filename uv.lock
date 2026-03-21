@@ -34,6 +34,61 @@ wheels = [
 ]
 
 [[package]]
+name = "az-rbac-watch"
+source = { editable = "." }
+dependencies = [
+    { name = "azure-identity" },
+    { name = "azure-mgmt-authorization" },
+    { name = "azure-mgmt-managementgroups" },
+    { name = "azure-mgmt-subscription" },
+    { name = "httpx" },
+    { name = "jinja2" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "hatch-vcs" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "types-pyyaml" },
+]
+docs = [
+    { name = "mkdocs-material" },
+    { name = "mkdocs-minify-plugin" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "azure-identity", specifier = ">=1.17.0" },
+    { name = "azure-mgmt-authorization", specifier = ">=4.0.0" },
+    { name = "azure-mgmt-managementgroups", specifier = ">=1.0.0" },
+    { name = "azure-mgmt-subscription", specifier = ">=3.0.0" },
+    { name = "hatch-vcs", marker = "extra == 'dev'", specifier = ">=0.4" },
+    { name = "httpx", specifier = ">=0.27.0" },
+    { name = "jinja2", specifier = ">=3.1.0" },
+    { name = "mkdocs-material", marker = "extra == 'docs'" },
+    { name = "mkdocs-minify-plugin", marker = "extra == 'docs'" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
+    { name = "pydantic", specifier = ">=2.7.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
+    { name = "pytest-cov", marker = "extra == 'dev'" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "rich", specifier = ">=13.7.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.0" },
+    { name = "typer", specifier = ">=0.12.0" },
+    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
+]
+provides-extras = ["dev", "docs"]
+
+[[package]]
 name = "azure-common"
 version = "1.1.28"
 source = { registry = "https://pypi.org/simple" }
@@ -124,61 +179,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/84/67/14b19a006e13d86f0
 wheels = [
     { url = "https://files.pythonhosted.org/packages/70/12/e6de2021c4689f857386670ba0b6d3c4025d4209e45df7dd7cdabe9a4ac1/azure_mgmt_subscription-3.1.1-py3-none-any.whl", hash = "sha256:38d4574a8d47fa17e3587d756e296cb63b82ad8fb21cd8543bcee443a502bf48", size = 79409, upload-time = "2022-09-06T07:30:47.247Z" },
 ]
-
-[[package]]
-name = "azure-permissions-watch"
-source = { editable = "." }
-dependencies = [
-    { name = "azure-identity" },
-    { name = "azure-mgmt-authorization" },
-    { name = "azure-mgmt-managementgroups" },
-    { name = "azure-mgmt-subscription" },
-    { name = "httpx" },
-    { name = "jinja2" },
-    { name = "pydantic" },
-    { name = "pyyaml" },
-    { name = "rich" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "hatch-vcs" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "types-pyyaml" },
-]
-docs = [
-    { name = "mkdocs-material" },
-    { name = "mkdocs-minify-plugin" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "azure-identity", specifier = ">=1.17.0" },
-    { name = "azure-mgmt-authorization", specifier = ">=4.0.0" },
-    { name = "azure-mgmt-managementgroups", specifier = ">=1.0.0" },
-    { name = "azure-mgmt-subscription", specifier = ">=3.0.0" },
-    { name = "hatch-vcs", marker = "extra == 'dev'", specifier = ">=0.4" },
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "jinja2", specifier = ">=3.1.0" },
-    { name = "mkdocs-material", marker = "extra == 'docs'" },
-    { name = "mkdocs-minify-plugin", marker = "extra == 'docs'" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "pydantic", specifier = ">=2.7.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
-    { name = "pytest-cov", marker = "extra == 'dev'" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "rich", specifier = ">=13.7.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.0" },
-    { name = "typer", specifier = ">=0.12.0" },
-    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
-]
-provides-extras = ["dev", "docs"]
 
 [[package]]
 name = "babel"

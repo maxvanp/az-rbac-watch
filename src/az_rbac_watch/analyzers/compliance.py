@@ -284,9 +284,7 @@ def _check_aggregation_rules(
 
             # Use the original scope casing from the first match
             scope_display = matched[0].scope
-            principals = ", ".join(
-                a.principal_display_name or a.principal_id for a in matched
-            )
+            principals = ", ".join(a.principal_display_name or a.principal_id for a in matched)
 
             findings.append(
                 ComplianceFinding(

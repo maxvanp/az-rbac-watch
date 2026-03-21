@@ -45,9 +45,7 @@ class FrameworkMapper:
             matched = [f for f in report.findings if f.rule_id in control.rule_names]
             if not control.rule_names:
                 # No automatable rules — mark as manual review
-                results.append(
-                    ControlResult(control=control, status="manual", findings=[], finding_count=0)
-                )
+                results.append(ControlResult(control=control, status="manual", findings=[], finding_count=0))
             else:
                 status = "pass" if len(matched) == 0 else "fail"
                 results.append(
@@ -103,9 +101,7 @@ def load_framework_definition(name_or_path: str) -> FrameworkDefinition:
 
     if not yaml_path.exists():
         available = ", ".join(sorted(_BUILTIN_FRAMEWORKS.keys()))
-        raise FileNotFoundError(
-            f"Framework '{name_or_path}' not found. Built-in frameworks: {available}"
-        )
+        raise FileNotFoundError(f"Framework '{name_or_path}' not found. Built-in frameworks: {available}")
 
     raw = yaml_path.read_text(encoding="utf-8")
     try:
