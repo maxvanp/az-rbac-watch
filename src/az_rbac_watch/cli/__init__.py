@@ -49,15 +49,17 @@ def main(
 
     # Zero-args → run audit by default
     if ctx.invoked_subcommand is None:
-        ctx.invoke(audit)  # type: ignore[name-defined]  # noqa: F821 — registered by cmd_audit (imported below)
+        from az_rbac_watch.cli.cmd_audit import audit
+
+        ctx.invoke(audit)
 
 
 # Command modules imported LAST to register on app (avoids circular imports)
-# from az_rbac_watch.cli import (
-#     cmd_audit,
-#     cmd_diff,
-#     cmd_discover,
-#     cmd_scan,
-#     cmd_snapshot,
-#     cmd_validate,
-# )
+from az_rbac_watch.cli import (  # noqa: E402, F401
+    cmd_audit,
+    cmd_diff,
+    cmd_discover,
+    cmd_scan,
+    cmd_snapshot,
+    cmd_validate,
+)

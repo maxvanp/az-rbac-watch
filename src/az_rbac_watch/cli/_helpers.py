@@ -10,7 +10,7 @@ Commands:
 from __future__ import annotations
 
 import logging
-import traceback  # noqa: F401
+import traceback
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Literal  # noqa: F401
@@ -20,7 +20,7 @@ import typer
 from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn
 
-from az_rbac_watch.analyzers.compliance import (  # noqa: F401
+from az_rbac_watch.analyzers.compliance import (
     ComplianceReport,
     check_drift,
     check_violations,
@@ -37,18 +37,49 @@ from az_rbac_watch.config.policy_model import (
     filter_scopes,
     load_policy_model,
     resolve_scopes,
-    save_policy_model,  # noqa: F401
+    save_policy_model,
 )
-from az_rbac_watch.config.settings import Settings, load_settings  # noqa: F401
-from az_rbac_watch.reporters.console_report import (  # noqa: F401
+from az_rbac_watch.config.settings import Settings, load_settings
+from az_rbac_watch.reporters.console_report import (
     print_audit_report,
     print_discover_summary,
     print_drift_report,
 )
-from az_rbac_watch.reporters.html_report import generate_framework_html_report, generate_html_report  # noqa: F401
+from az_rbac_watch.reporters.html_report import generate_framework_html_report, generate_html_report
 from az_rbac_watch.reporters.json_report import generate_json_report
-from az_rbac_watch.scanner.discovery import discover_policy  # noqa: F401
+from az_rbac_watch.scanner.discovery import discover_policy
 from az_rbac_watch.scanner.rbac_scanner import RbacScanResult, resolve_display_names, scan_rbac
+
+__all__ = [
+    # Re-exported for command modules
+    "ComplianceReport",
+    "Literal",
+    "ManagementGroup",
+    "PolicyModel",
+    "RbacScanResult",
+    "Settings",
+    "Subscription",
+    "check_credentials",
+    "check_drift",
+    "check_violations",
+    "discover_policy",
+    "filter_scopes",
+    "generate_framework_html_report",
+    "generate_html_report",
+    "generate_json_report",
+    "list_accessible_management_groups",
+    "list_accessible_subscriptions",
+    "load_policy_model",
+    "load_settings",
+    "print_audit_report",
+    "print_discover_summary",
+    "print_drift_report",
+    "resolve_display_names",
+    "resolve_scopes",
+    "save_policy_model",
+    "scan_rbac",
+    "traceback",
+]
 
 # Noisy third-party loggers — kept at WARNING even with --verbose
 _NOISY_LOGGERS = (

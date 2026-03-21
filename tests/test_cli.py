@@ -25,7 +25,7 @@ VALID_TENANT_ID = "11111111-1111-1111-1111-111111111111"
 @pytest.fixture(autouse=True)
 def _mock_check_credentials() -> object:
     """Mock check_credentials for all CLI tests — avoids actual Azure calls."""
-    with patch("az_rbac_watch.cli.check_credentials", return_value=True):
+    with patch("az_rbac_watch.cli._helpers.check_credentials", return_value=True):
         yield
 
 
@@ -220,8 +220,8 @@ class TestScanCommand:
         assert "No baseline rules in policy model" in result.output
         assert "az-rbac-watch discover" in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_compliant(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """Policy matches reality → exit 0, output contains drift-free message."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
@@ -231,8 +231,8 @@ class TestScanCommand:
         assert result.exit_code == 0
         assert "drift" in result.output.lower() or "aucun" in result.output.lower()
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_with_drift(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """Undeclared assignment → exit 1."""
         data: dict = {
@@ -254,8 +254,8 @@ class TestScanCommand:
         result = runner.invoke(app, ["scan", "--policy", str(p)])
         assert result.exit_code == 1
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_error_exit_code(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """Azure error during scan → exit 2."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
@@ -264,8 +264,8 @@ class TestScanCommand:
         result = runner.invoke(app, ["scan", "--policy", str(policy_path)])
         assert result.exit_code == 2
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_verbose_flag(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """The --verbose flag does not break execution."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
@@ -274,8 +274,8 @@ class TestScanCommand:
         result = runner.invoke(app, ["scan", "--policy", str(policy_path), "--verbose"])
         assert result.exit_code == 0
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_output_html(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--output report.html generates an HTML file."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
@@ -288,8 +288,8 @@ class TestScanCommand:
         html = html_path.read_text(encoding="utf-8")
         assert "<!DOCTYPE html>" in html
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_without_output_no_html(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """Without --output, no HTML file is created."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
@@ -300,8 +300,8 @@ class TestScanCommand:
         html_files = list(tmp_path.glob("*.html"))
         assert len(html_files) == 0
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_output_with_drift(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--output with drift → HTML contains DRIFT."""
         data: dict = {
@@ -323,8 +323,8 @@ class TestScanCommand:
         html = html_path.read_text(encoding="utf-8")
         assert "DRIFT" in html
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_format_json(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--format json outputs valid JSON to stdout."""
         import json
@@ -338,8 +338,8 @@ class TestScanCommand:
         assert "findings" in data
         assert "summary" in data
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_format_json_with_output(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--format json --output writes JSON file."""
         import json
@@ -365,8 +365,8 @@ class TestScanCommand:
         data = json.loads(json_path.read_text(encoding="utf-8"))
         assert "findings" in data
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_format_json_with_drift(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--format json includes drift findings in output."""
         import json
@@ -395,8 +395,8 @@ class TestScanCommand:
         result = runner.invoke(app, ["scan", "--policy", str(policy_path), "--format", "xml"])
         assert result.exit_code == 2
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_exclude_subscription(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--exclude-subscription filters the subscription from scan."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True, sub_ids=[VALID_SUB_ID, VALID_SUB_ID_2])
@@ -419,9 +419,9 @@ class TestScanCommand:
         assert VALID_SUB_ID not in sub_ids
         assert VALID_SUB_ID_2 in sub_ids
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.resolve_scopes")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_scopes")
     def test_scan_scope_all_triggers_auto_discovery(
         self, mock_resolve_scopes, mock_scan, _mock_resolve, tmp_path: Path
     ) -> None:
@@ -447,9 +447,9 @@ class TestScanCommand:
         assert result.exit_code == 0
         mock_resolve_scopes.assert_called_once()
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.resolve_scopes")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_scopes")
     def test_scan_scope_all_with_yaml_exclusions(
         self, mock_resolve_scopes, mock_scan, _mock_resolve, tmp_path: Path
     ) -> None:
@@ -480,9 +480,9 @@ class TestScanCommand:
         assert result.exit_code == 0
         mock_resolve_scopes.assert_called_once()
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.resolve_scopes")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_scopes")
     def test_scan_scope_all_with_cli_exclusions(
         self, mock_resolve_scopes, mock_scan, _mock_resolve, tmp_path: Path
     ) -> None:
@@ -524,20 +524,20 @@ class TestScanCommand:
         assert VALID_SUB_ID in sub_ids
         assert VALID_SUB_ID_2 not in sub_ids
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_scope_explicit_no_resolve(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """Policy with scope=explicit does NOT call resolve_scopes."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
         mock_scan.return_value = _mock_scan_result(with_assignments=True)
 
-        with patch("az_rbac_watch.cli.resolve_scopes") as mock_rs:
+        with patch("az_rbac_watch.cli._helpers.resolve_scopes") as mock_rs:
             result = runner.invoke(app, ["scan", "--policy", str(policy_path)])
             assert result.exit_code == 0
             mock_rs.assert_not_called()
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_exclude_management_group(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--exclude-management-group filters the MG from scan."""
         policy_path = _write_policy(tmp_path, with_mg=True, with_baseline_rules=True)
@@ -579,8 +579,8 @@ class TestAuditCommand:
         assert result.exit_code == 0
         assert "governance" in result.output.lower()
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_audit_no_violations(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """No matching governance rules → exit 0."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
@@ -590,8 +590,8 @@ class TestAuditCommand:
         assert result.exit_code == 0
         assert "violation" in result.output.lower() or "guardrail" in result.output.lower()
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_audit_with_violations(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """Governance rule matches assignment → exit 1."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
@@ -617,8 +617,8 @@ class TestAuditCommand:
         result = runner.invoke(app, ["audit", "--policy", str(policy_path)])
         assert result.exit_code == 1
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_audit_error_exit_code(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """Azure error during audit → exit 2."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
@@ -627,8 +627,8 @@ class TestAuditCommand:
         result = runner.invoke(app, ["audit", "--policy", str(policy_path)])
         assert result.exit_code == 2
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_audit_format_json(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--format json outputs valid JSON."""
         import json
@@ -642,8 +642,8 @@ class TestAuditCommand:
         assert "findings" in data
         assert "summary" in data
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_audit_output_html(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--output generates HTML report."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
@@ -671,8 +671,8 @@ class TestDiscoverCommand:
         result = runner.invoke(app, ["discover", "--policy", str(tmp_path / "nope.yaml")])
         assert result.exit_code == 2
 
-    @patch("az_rbac_watch.cli.discover_policy")
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.discover_policy")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_discover_creates_file(self, mock_scan, mock_discover, tmp_path: Path) -> None:
         """Discovery scans, resolves names, and creates the output file."""
         from az_rbac_watch.config.policy_model import PolicyModel, Rule, RuleMatch
@@ -702,7 +702,7 @@ class TestDiscoverCommand:
         assert output_path.exists()
         assert "discovered" in result.output
 
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_discover_scan_error(self, mock_scan, tmp_path: Path) -> None:
         """Azure error during discover → exit 2."""
         policy_path = _write_policy(tmp_path)
@@ -720,10 +720,10 @@ class TestDiscoverCommand:
         result = runner.invoke(app, ["discover", "--policy", str(p)])
         assert result.exit_code == 0
 
-    @patch("az_rbac_watch.cli.discover_policy")
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.discover_policy")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_discover_no_args_auto_discovery(
         self, mock_list_subs, mock_list_mgs, mock_scan, mock_discover, tmp_path: Path
     ) -> None:
@@ -748,10 +748,10 @@ class TestDiscoverCommand:
         mock_list_subs.assert_called()
         mock_scan.assert_called_once()
 
-    @patch("az_rbac_watch.cli.discover_policy")
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.discover_policy")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_discover_with_tenant_and_subs(
         self, mock_list_subs, mock_list_mgs, mock_scan, mock_discover, tmp_path: Path
     ) -> None:
@@ -786,10 +786,10 @@ class TestDiscoverCommand:
         assert output_path.exists()
         mock_scan.assert_called_once()
 
-    @patch("az_rbac_watch.cli.discover_policy")
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.discover_policy")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_discover_with_exclusions(
         self, mock_list_subs, mock_list_mgs, mock_scan, mock_discover, tmp_path: Path
     ) -> None:
@@ -826,8 +826,8 @@ class TestDiscoverCommand:
         assert VALID_SUB_ID not in sub_ids
         assert VALID_SUB_ID_2 in sub_ids
 
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_discover_no_accessible_scopes(self, mock_list_subs, mock_list_mgs) -> None:
         """No accessible scope → exit 2."""
         mock_list_subs.return_value = []
@@ -836,8 +836,8 @@ class TestDiscoverCommand:
         result = runner.invoke(app, ["discover", "--tenant-id", VALID_TENANT_ID])
         assert result.exit_code == 2
 
-    @patch("az_rbac_watch.cli.discover_policy")
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.discover_policy")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_discover_policy_still_works(self, mock_scan, mock_discover, tmp_path: Path) -> None:
         """--policy still works."""
         from az_rbac_watch.config.policy_model import PolicyModel
@@ -862,24 +862,24 @@ class TestDiscoverCommand:
 class TestDebugFlag:
     """Tests for the --debug flag on scan and discover commands."""
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac", side_effect=RuntimeError("boom"))
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac", side_effect=RuntimeError("boom"))
     def test_scan_debug_shows_traceback(self, _mock_scan, _mock_resolve, tmp_path: Path) -> None:
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
         result = runner.invoke(app, ["scan", "--policy", str(policy_path), "--debug"])
         assert result.exit_code == 2
         assert "Traceback" in result.output or "RuntimeError" in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac", side_effect=RuntimeError("boom"))
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac", side_effect=RuntimeError("boom"))
     def test_scan_no_debug_shows_hint(self, _mock_scan, _mock_resolve, tmp_path: Path) -> None:
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
         result = runner.invoke(app, ["scan", "--policy", str(policy_path)])
         assert result.exit_code == 2
         assert "--debug" in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_debug_no_error(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--debug does not break normal execution."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
@@ -894,9 +894,9 @@ class TestDebugFlag:
 class TestAdHocScan:
     """Tests for scan command in ad-hoc mode (no --policy)."""
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_scan_adhoc_with_subscription(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """scan -s <id> without --policy builds model on-the-fly."""
         mock_list_subs.return_value = [
@@ -911,9 +911,9 @@ class TestAdHocScan:
         assert len(model_arg.subscriptions) == 1
         assert str(model_arg.subscriptions[0].id) == VALID_SUB_ID
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_scan_adhoc_shows_hint(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc scan prints hint about no baseline rules."""
         mock_list_subs.return_value = [
@@ -932,9 +932,9 @@ class TestAdHocScan:
         assert result.exit_code == 2
         assert "mutually exclusive" in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_scan_adhoc_json_format(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc scan works with --format json."""
         import json
@@ -955,9 +955,9 @@ class TestAdHocScan:
 class TestAdHocAudit:
     """Tests for audit command in ad-hoc mode (no --policy)."""
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_audit_adhoc_uses_default_rules(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """audit -s <id> without --policy injects default governance rules."""
         mock_list_subs.return_value = [
@@ -973,9 +973,9 @@ class TestAdHocAudit:
         governance_rules = [r for r in model_arg.rules if r.type == "governance"]
         assert len(governance_rules) > 0
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_audit_adhoc_prints_default_rules_hint(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc audit prints hint about default rules."""
         mock_list_subs.return_value = [
@@ -992,9 +992,9 @@ class TestAdHocAudit:
         result = runner.invoke(app, ["audit", "--policy", str(policy_path), "-s", VALID_SUB_ID])
         assert result.exit_code == 2
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_audit_adhoc_detects_violations(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc audit with User principal → violation (no-direct-users rule)."""
         mock_list_subs.return_value = [
@@ -1006,10 +1006,10 @@ class TestAdHocAudit:
         result = runner.invoke(app, ["audit", "-s", VALID_SUB_ID])
         assert result.exit_code == 1  # violations detected
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_audit_adhoc_auto_discovery(self, mock_list_subs, mock_list_mgs, mock_scan, _mock_resolve) -> None:
         """audit without --policy and without -s/-m triggers auto-discovery."""
         mock_list_subs.return_value = [
@@ -1026,8 +1026,8 @@ class TestAdHocAudit:
 class TestActionableErrorMessages:
     """Tests pour les messages d'erreur actionnables."""
 
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_no_tenant_id_shows_actionable_message(self, mock_list_subs, mock_list_mgs) -> None:
         """Cannot resolve tenant_id → message with remediation steps."""
         mock_list_subs.return_value = [(VALID_SUB_ID, "Prod", "")]  # empty tenant_id
@@ -1039,8 +1039,8 @@ class TestActionableErrorMessages:
         assert "az login" in result.output
         assert "--tenant-id" in result.output
 
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_no_accessible_subscriptions_shows_actionable_message(self, mock_list_subs, mock_list_mgs) -> None:
         """No accessible scopes → message with remediation steps."""
         mock_list_subs.return_value = []
@@ -1052,9 +1052,9 @@ class TestActionableErrorMessages:
         assert "az login" in result.output
         assert "Reader role" in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_adhoc_scan_warning_is_bold(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc scan message contains expected text (bold yellow in real terminal)."""
         mock_list_subs.return_value = [(VALID_SUB_ID, "Prod", VALID_TENANT_ID)]
@@ -1064,9 +1064,9 @@ class TestActionableErrorMessages:
         assert result.exit_code == 0
         assert "Ad-hoc mode: no baseline rules" in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_adhoc_audit_default_rules_warning(self, mock_list_subs, mock_scan, _mock_resolve) -> None:
         """Ad-hoc audit message contains expected text (bold yellow in real terminal)."""
         mock_list_subs.return_value = [(VALID_SUB_ID, "Prod", VALID_TENANT_ID)]
@@ -1090,8 +1090,8 @@ class TestGlobalHelp:
 class TestQuietFlag:
     """Tests pour le flag --quiet qui supprime les messages de statut."""
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_quiet_suppresses_status_messages(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """--quiet suppresses status/progress messages."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
@@ -1102,8 +1102,8 @@ class TestQuietFlag:
         assert "Auto-discover" not in result.output
         assert "Resolving" not in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_quiet_short_flag(self, mock_scan, _mock_resolve, tmp_path: Path) -> None:
         """Short flag -q works the same as --quiet."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
@@ -1170,7 +1170,7 @@ class TestDryRun:
         assert "1 subscription" in result.output.lower()
         assert "1 baseline rule" in result.output.lower()
 
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_dry_run_no_api_call(self, mock_scan: MagicMock, tmp_path: Path) -> None:
         """--dry-run must NOT call scan_rbac."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
@@ -1185,7 +1185,7 @@ class TestDryRun:
         assert "dry run" in result.output.lower()
         assert "1 governance rule" in result.output.lower()
 
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_audit_dry_run_no_api_call(self, mock_scan: MagicMock, tmp_path: Path) -> None:
         """--dry-run on audit must NOT call scan_rbac."""
         policy_path = _write_policy(tmp_path, with_governance_rules=True)
@@ -1199,7 +1199,7 @@ class TestDryRun:
         assert result.exit_code == 0
         assert "dry run" in result.output.lower()
 
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_discover_dry_run_no_api_call(self, mock_scan: MagicMock, tmp_path: Path) -> None:
         """--dry-run on discover must NOT call scan_rbac."""
         policy_path = _write_policy(tmp_path)
@@ -1297,7 +1297,7 @@ class TestAutoDetectPolicy:
         # Must NOT display the auto-detection message
         assert "Using policy file:" not in result.output
 
-    @patch("az_rbac_watch.cli._build_model_from_args")
+    @patch("az_rbac_watch.cli._helpers._build_model_from_args")
     def test_no_policy_file_falls_through(
         self, mock_build: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -1319,10 +1319,10 @@ class TestAutoDetectPolicy:
 class TestZeroArgsDefault:
     """Tests for zero-args behavior → audit by default."""
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
     def test_no_args_runs_audit(
         self, mock_mgs: MagicMock, mock_subs: MagicMock, mock_scan: MagicMock, _mock_resolve: MagicMock
     ) -> None:
@@ -1334,10 +1334,10 @@ class TestZeroArgsDefault:
         assert result.exit_code in (0, 1)
         mock_scan.assert_called_once()
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
     def test_no_args_shows_next_steps(
         self, mock_mgs: MagicMock, mock_subs: MagicMock, mock_scan: MagicMock, _mock_resolve: MagicMock
     ) -> None:
@@ -1363,7 +1363,7 @@ class TestCredentialCheck:
 
     def test_credential_check_failure_exits_2(self) -> None:
         """Credentials unavailable → exit code 2 with actionable message."""
-        with patch("az_rbac_watch.cli.check_credentials", return_value=False):
+        with patch("az_rbac_watch.cli._helpers.check_credentials", return_value=False):
             result = runner.invoke(app, ["audit", "-s", VALID_SUB_ID])
             assert result.exit_code == 2
             assert "no Azure credentials found" in result.output
@@ -1384,7 +1384,7 @@ class TestCredentialCheck:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(policy_path_content)
             f.flush()
-            with patch("az_rbac_watch.cli.check_credentials", return_value=False):
+            with patch("az_rbac_watch.cli._helpers.check_credentials", return_value=False):
                 result = runner.invoke(app, ["audit", "--policy", f.name, "--dry-run"])
                 assert result.exit_code == 0
                 assert "no Azure credentials found" not in result.output
@@ -1403,21 +1403,21 @@ class TestCredentialCheck:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(policy_path_content)
             f.flush()
-            with patch("az_rbac_watch.cli.check_credentials", return_value=False):
+            with patch("az_rbac_watch.cli._helpers.check_credentials", return_value=False):
                 result = runner.invoke(app, ["validate", "--policy", f.name])
                 assert result.exit_code == 0
 
     def test_scan_credential_check_failure(self) -> None:
         """scan sans credentials → exit code 2."""
-        with patch("az_rbac_watch.cli.check_credentials", return_value=False):
+        with patch("az_rbac_watch.cli._helpers.check_credentials", return_value=False):
             result = runner.invoke(app, ["scan", "-s", VALID_SUB_ID])
             assert result.exit_code == 2
             assert "az login" in result.output
 
-    @patch("az_rbac_watch.cli.discover_policy")
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.discover_policy")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_discover_credential_check_failure(
         self,
         _mock_subs: MagicMock,
@@ -1426,7 +1426,7 @@ class TestCredentialCheck:
         _mock_discover: MagicMock,
     ) -> None:
         """discover sans credentials → exit code 2."""
-        with patch("az_rbac_watch.cli.check_credentials", return_value=False):
+        with patch("az_rbac_watch.cli._helpers.check_credentials", return_value=False):
             result = runner.invoke(app, ["discover", "-s", VALID_SUB_ID])
             assert result.exit_code == 2
             assert "az login" in result.output
@@ -1435,8 +1435,8 @@ class TestCredentialCheck:
 class TestNextStepsFooter:
     """Tests for the 'Next steps' footer after reports."""
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_compliant_shows_ci_hint(self, mock_scan: MagicMock, _mock_resolve: MagicMock, tmp_path: Path) -> None:
         """compliant scan shows CI hint."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
@@ -1446,8 +1446,8 @@ class TestNextStepsFooter:
         assert "All clear" in result.output
         assert "--format json" in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_findings_shows_review_hint(
         self, mock_scan: MagicMock, _mock_resolve: MagicMock, tmp_path: Path
     ) -> None:
@@ -1477,10 +1477,10 @@ class TestNextStepsFooter:
         assert result.exit_code == 1
         assert "Review findings" in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
     def test_audit_adhoc_shows_discover_hint(
         self, mock_mgs: MagicMock, mock_subs: MagicMock, mock_scan: MagicMock, _mock_resolve: MagicMock
     ) -> None:
@@ -1492,8 +1492,8 @@ class TestNextStepsFooter:
         assert "az-rbac-watch discover" in result.output
         assert "az-rbac-watch scan" in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_audit_with_policy_no_next_steps(
         self, mock_scan: MagicMock, _mock_resolve: MagicMock, tmp_path: Path
     ) -> None:
@@ -1503,8 +1503,8 @@ class TestNextStepsFooter:
         result = runner.invoke(app, ["audit", "--policy", str(policy_path)])
         assert "az-rbac-watch discover" not in result.output
 
-    @patch("az_rbac_watch.cli.resolve_display_names", side_effect=lambda sr, **kw: sr)
-    @patch("az_rbac_watch.cli.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names", side_effect=lambda sr, **kw: sr)
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
     def test_scan_json_no_next_steps(self, mock_scan: MagicMock, _mock_resolve: MagicMock, tmp_path: Path) -> None:
         """scan --format json does not show next steps."""
         policy_path = _write_policy(tmp_path, with_baseline_rules=True)
@@ -1537,10 +1537,10 @@ class TestSnapshotCommand:
         result = runner.invoke(app, ["snapshot"])
         assert result.exit_code == 2
 
-    @patch("az_rbac_watch.cli.resolve_display_names")
-    @patch("az_rbac_watch.cli.scan_rbac")
-    @patch("az_rbac_watch.cli.list_accessible_management_groups")
-    @patch("az_rbac_watch.cli.list_accessible_subscriptions")
+    @patch("az_rbac_watch.cli._helpers.resolve_display_names")
+    @patch("az_rbac_watch.cli._helpers.scan_rbac")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_management_groups")
+    @patch("az_rbac_watch.cli._helpers.list_accessible_subscriptions")
     def test_snapshot_creates_file(
         self,
         mock_list_subs: MagicMock,
