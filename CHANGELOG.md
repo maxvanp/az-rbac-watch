@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Framework compliance mapping module (CIS Azure Benchmark)
+- CLI refactored into `cli/` package with one module per command
+
+## [0.8.0] - 2026-03-21
+
+### Added
+
+- Azure Portal deep links in scan and audit reports for every finding
+
+## [0.7.0] - 2026-03-21
+
+### Added
+
+- HTML report for snapshot diffs (`az-rbac-watch diff --html`)
+
+## [0.6.0] - 2026-03-21
+
+### Added
+
+- Enhanced HTML reports: severity filter buttons, text search, and improved layout
+
+## [0.5.0] - 2026-03-21
+
+### Added
+
+- Reusable GitHub Action (`uses: maxvanp/az-rbac-watch/.github/workflows/rbac-check.yml`)
+
+## [0.4.2] - 2026-03-09
+
+No code changes; tag created to align release artifacts.
+
+## [0.4.1] - 2026-03-09
+
+### Added
+
+- README documentation for `snapshot`, `diff`, and `--orphans-only` commands
+
+## [0.4.0] - 2026-03-08
+
+### Added
+
+- `snapshot` command: capture current RBAC assignments to a JSON file
+- `diff` command: compare two snapshots and report added/removed assignments
+- Snapshot model with save/load serialization
+- Diff engine with console and JSON reporters
+- Orphaned assignment detection surfaced in diff output
+
+## [0.3.0] - 2026-03-08
+
+### Added
+
+- Orphaned assignment detection: flags assignments whose principal no longer exists in Azure AD
+- `--orphans-only` flag on `scan` command to report only orphaned assignments
+- `orphan_count` field in `ComplianceSummary`
+- Example policies: small team, enterprise landing zone, CIS/NIST/SOC2/ISO framework rules
+- CI/CD integration guide (GitHub Actions, Azure DevOps)
+
 ## [0.2.0] - 2026-03-07
 
 ### Changed
