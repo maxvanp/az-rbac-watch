@@ -804,7 +804,8 @@ _FRAMEWORK_HTML_TEMPLATE = """\
         <div class="label">Passing</div>
       </div>
       <div class="card">
-        <div class="value" style="color: {{ '#e74c3c' if failing_controls else '#27ae60' }}">{{ failing_controls }}</div>
+        <div class="value" style="color: {{ '#e74c3c' if failing_controls else '#27ae60' }}">
+          {{ failing_controls }}</div>
         <div class="label">Failing</div>
       </div>
       <div class="card">
@@ -905,7 +906,7 @@ _FRAMEWORK_HTML_TEMPLATE = """\
 
 
 def generate_framework_html_report(
-    fw_report: "FrameworkComplianceReport",
+    fw_report: FrameworkComplianceReport,
     output_path: Path,
 ) -> None:
     """Generate a framework compliance HTML report (single-file, CSS inline).
@@ -914,7 +915,6 @@ def generate_framework_html_report(
         fw_report: The framework compliance report to export.
         output_path: Path of the HTML file to create.
     """
-    from az_rbac_watch.frameworks.models import FrameworkComplianceReport  # noqa: F811
 
     score = fw_report.compliance_score
     score_clr = _score_color(score)

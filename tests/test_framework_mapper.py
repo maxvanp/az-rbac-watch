@@ -19,7 +19,6 @@ from az_rbac_watch.analyzers.compliance import (
 )
 from az_rbac_watch.frameworks.mapper import FrameworkMapper, load_framework_definition
 from az_rbac_watch.frameworks.models import (
-    ControlResult,
     FrameworkComplianceReport,
     FrameworkControl,
     FrameworkDefinition,
