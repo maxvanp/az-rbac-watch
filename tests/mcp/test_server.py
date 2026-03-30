@@ -6,7 +6,6 @@ import pytest
 
 from az_rbac_watch.mcp.server import _validate_args, call_tool, list_tools
 
-
 # ---------------------------------------------------------------------------
 # list_tools
 # ---------------------------------------------------------------------------

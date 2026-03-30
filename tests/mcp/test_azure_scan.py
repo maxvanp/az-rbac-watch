@@ -44,12 +44,8 @@ async def test_scan_subscription_specific(mock_scan_result):
     from az_rbac_watch.mcp.azure_scan import scan_subscription_async
 
     with (
-        patch(
-            "az_rbac_watch.mcp.azure_scan.get_authorization_client"
-        ) as mock_client,
-        patch(
-            "az_rbac_watch.mcp.azure_scan.scan_subscription"
-        ) as mock_scan,
+        patch("az_rbac_watch.mcp.azure_scan.get_authorization_client") as mock_client,
+        patch("az_rbac_watch.mcp.azure_scan.scan_subscription") as mock_scan,
         patch(
             "az_rbac_watch.mcp.azure_scan.resolve_display_names",
             side_effect=lambda r: r,
@@ -72,12 +68,8 @@ async def test_scan_subscription_all(mock_scan_result):
             "az_rbac_watch.mcp.azure_scan.list_accessible_subscriptions",
             return_value=[("sub-123", "Test Sub", "tenant-1")],
         ),
-        patch(
-            "az_rbac_watch.mcp.azure_scan.get_authorization_client"
-        ),
-        patch(
-            "az_rbac_watch.mcp.azure_scan.scan_subscription"
-        ) as mock_scan,
+        patch("az_rbac_watch.mcp.azure_scan.get_authorization_client"),
+        patch("az_rbac_watch.mcp.azure_scan.scan_subscription") as mock_scan,
         patch(
             "az_rbac_watch.mcp.azure_scan.resolve_display_names",
             side_effect=lambda r: r,

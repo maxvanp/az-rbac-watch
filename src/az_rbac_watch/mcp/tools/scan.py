@@ -56,9 +56,7 @@ SCAN_TOOL_DEF = {
         "properties": {
             "subscriptionId": {
                 "type": "string",
-                "description": (
-                    "Azure subscription ID to scan. Omit to scan all accessible subscriptions."
-                ),
+                "description": ("Azure subscription ID to scan. Omit to scan all accessible subscriptions."),
             },
             "policyPath": {
                 "type": "string",
@@ -81,11 +79,13 @@ def _detect_orphans(
             PrincipalType.UNKNOWN,
             None,
         ):
-            orphans.append({
-                "principalId": a.principal_id,
-                "role": a.role_name or "(unknown)",
-                "scope": a.scope,
-            })
+            orphans.append(
+                {
+                    "principalId": a.principal_id,
+                    "role": a.role_name or "(unknown)",
+                    "scope": a.scope,
+                }
+            )
     return orphans
 
 
@@ -136,9 +136,7 @@ def _build_top_actions(
                 return actions
 
     if orphan_count > 0 and len(actions) < max_actions:
-        actions.append(
-            f"Remove {orphan_count} orphaned assignment(s) pointing to deleted principals"
-        )
+        actions.append(f"Remove {orphan_count} orphaned assignment(s) pointing to deleted principals")
 
     return actions[:max_actions]
 

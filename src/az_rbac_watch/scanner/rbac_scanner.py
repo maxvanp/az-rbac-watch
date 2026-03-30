@@ -208,12 +208,14 @@ def scan_role_definitions(
         role_type = RoleType.CUSTOM if rd.role_type == "CustomRole" else RoleType.BUILT_IN
         perms: list[dict[str, list[str]]] = []
         for p in rd.permissions or []:
-            perms.append({
-                "actions": list(p.actions or []),
-                "not_actions": list(p.not_actions or []),
-                "data_actions": list(p.data_actions or []),
-                "not_data_actions": list(p.not_data_actions or []),
-            })
+            perms.append(
+                {
+                    "actions": list(p.actions or []),
+                    "not_actions": list(p.not_actions or []),
+                    "data_actions": list(p.data_actions or []),
+                    "not_data_actions": list(p.not_data_actions or []),
+                }
+            )
         definitions.append(
             ScannedRoleDefinition(
                 id=rd.id or "",
@@ -344,12 +346,14 @@ def scan_role_definitions_for_scope(
         role_type = RoleType.CUSTOM if rd.role_type == "CustomRole" else RoleType.BUILT_IN
         perms: list[dict[str, list[str]]] = []
         for p in rd.permissions or []:
-            perms.append({
-                "actions": list(p.actions or []),
-                "not_actions": list(p.not_actions or []),
-                "data_actions": list(p.data_actions or []),
-                "not_data_actions": list(p.not_data_actions or []),
-            })
+            perms.append(
+                {
+                    "actions": list(p.actions or []),
+                    "not_actions": list(p.not_actions or []),
+                    "data_actions": list(p.data_actions or []),
+                    "not_data_actions": list(p.not_data_actions or []),
+                }
+            )
         definitions.append(
             ScannedRoleDefinition(
                 id=rd.id or "",

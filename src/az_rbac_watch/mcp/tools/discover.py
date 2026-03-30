@@ -34,9 +34,7 @@ DISCOVER_TOOL_DEF = {
         "properties": {
             "subscriptionId": {
                 "type": "string",
-                "description": (
-                    "Azure subscription ID to scan. Omit to scan all accessible subscriptions."
-                ),
+                "description": ("Azure subscription ID to scan. Omit to scan all accessible subscriptions."),
             },
             "outputPath": {
                 "type": "string",
@@ -83,9 +81,7 @@ def _deduplicate_assignments(
 
 def _build_baseline_rule(assignment: ScannedRoleAssignment) -> Rule:
     """Build a baseline rule from a role assignment."""
-    principal_slug = _slugify(
-        assignment.principal_display_name or assignment.principal_id
-    )
+    principal_slug = _slugify(assignment.principal_display_name or assignment.principal_id)
     role_slug = _slugify(assignment.role_name or "unknown")
     name = f"baseline-{principal_slug}-{role_slug}"
 
@@ -134,8 +130,7 @@ async def handle_discover(
 
     # 5. Build subscriptions list from scan results
     subscriptions = [
-        Subscription(id=UUID(sr.subscription_id), name=sr.subscription_name)
-        for sr in scan_result.subscription_results
+        Subscription(id=UUID(sr.subscription_id), name=sr.subscription_name) for sr in scan_result.subscription_results
     ]
 
     # 6. Build PolicyModel

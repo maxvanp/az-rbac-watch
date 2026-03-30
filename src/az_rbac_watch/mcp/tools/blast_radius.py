@@ -44,9 +44,7 @@ BLAST_RADIUS_TOOL_DEF = {
             },
             "subscriptionId": {
                 "type": "string",
-                "description": (
-                    "Azure subscription ID to scan. Omit to scan all accessible subscriptions."
-                ),
+                "description": ("Azure subscription ID to scan. Omit to scan all accessible subscriptions."),
             },
         },
         "required": ["principal"],
@@ -115,17 +113,12 @@ def _compute_impact_score(
     if not assignments:
         return "none"
 
-    has_owner_at_sub = any(
-        a.role_name == "Owner" and _is_subscription_scope(a.scope)
-        for a in assignments
-    )
+    has_owner_at_sub = any(a.role_name == "Owner" and _is_subscription_scope(a.scope) for a in assignments)
     if has_owner_at_sub:
         return "critical"
 
     has_iam_access = len(categorized.get("iam", [])) > 0
-    has_critical_at_sub = any(
-        _is_subscription_scope(a.scope) for a in assignments
-    ) and len(critical_access) > 0
+    has_critical_at_sub = any(_is_subscription_scope(a.scope) for a in assignments) and len(critical_access) > 0
 
     if has_iam_access or has_critical_at_sub:
         return "high"
@@ -149,15 +142,11 @@ def _generate_recommendations(
 
     has_iam = len(categorized.get("iam", [])) > 0
     if has_iam:
-        recommendations.append(
-            "IAM write access detected \u2014 consider using PIM for just-in-time elevation"
-        )
+        recommendations.append("IAM write access detected \u2014 consider using PIM for just-in-time elevation")
 
     has_keyvault = len(categorized.get("keyVault", [])) > 0
     if has_keyvault:
-        recommendations.append(
-            "Key Vault access detected \u2014 audit recent secret reads/writes"
-        )
+        recommendations.append("Key Vault access detected \u2014 audit recent secret reads/writes")
 
     return recommendations
 

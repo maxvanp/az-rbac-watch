@@ -41,8 +41,9 @@ Add to your `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "cloudsight-rbac": {
-      "command": "csight"
+    "az-rbac-watch": {
+      "command": "az-rbac-watch",
+      "args": ["mcp"]
     }
   }
 }
@@ -53,9 +54,9 @@ Add to your `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "cloudsight-rbac": {
+    "az-rbac-watch": {
       "command": "uvx",
-      "args": ["--from", "az-rbac-watch[mcp]", "csight"]
+      "args": ["--from", "az-rbac-watch[mcp]", "az-rbac-watch", "mcp"]
     }
   }
 }

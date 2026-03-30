@@ -34,23 +34,15 @@ WHO_CAN_TOOL_DEF = {
         "properties": {
             "action": {
                 "type": "string",
-                "description": (
-                    "Azure RBAC action to check, e.g. "
-                    "'Microsoft.Compute/virtualMachines/delete'."
-                ),
+                "description": ("Azure RBAC action to check, e.g. 'Microsoft.Compute/virtualMachines/delete'."),
             },
             "scope": {
                 "type": "string",
-                "description": (
-                    "Azure ARM scope to check, e.g. "
-                    "'/subscriptions/{id}/resourceGroups/{name}'."
-                ),
+                "description": ("Azure ARM scope to check, e.g. '/subscriptions/{id}/resourceGroups/{name}'."),
             },
             "subscriptionId": {
                 "type": "string",
-                "description": (
-                    "Azure subscription ID. If omitted, extracted from scope."
-                ),
+                "description": ("Azure subscription ID. If omitted, extracted from scope."),
             },
         },
         "required": ["action", "scope"],
@@ -133,16 +125,18 @@ async def handle_who_can(
             assignment.role_name or "(unknown)",
         )
 
-        principals.append({
-            "name": assignment.principal_display_name or assignment.principal_id,
-            "principalId": assignment.principal_id,
-            "principalType": str(assignment.principal_type),
-            "via": {
-                "role": role_name,
-                "assignmentScope": assignment.scope,
-                "inherited": inherited,
-            },
-        })
+        principals.append(
+            {
+                "name": assignment.principal_display_name or assignment.principal_id,
+                "principalId": assignment.principal_id,
+                "principalType": str(assignment.principal_type),
+                "via": {
+                    "role": role_name,
+                    "assignmentScope": assignment.scope,
+                    "inherited": inherited,
+                },
+            }
+        )
 
     output = {
         "action": action,

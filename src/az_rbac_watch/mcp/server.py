@@ -33,10 +33,7 @@ app = Server("cloudsight-rbac")
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
-    return [
-        Tool(name=t["name"], description=t["description"], inputSchema=t["inputSchema"])
-        for t in TOOLS
-    ]
+    return [Tool(name=t["name"], description=t["description"], inputSchema=t["inputSchema"]) for t in TOOLS]
 
 
 def _validate_args(name: str, arguments: dict) -> dict:
@@ -112,7 +109,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 
 def main() -> None:
-    """Entry point for 'csight' command. Starts the MCP server on stdio."""
+    """Entry point for 'az-rbac-watch mcp' command. Starts the MCP server on stdio."""
+
     async def _run() -> None:
         async with stdio_server() as (read_stream, write_stream):
             await app.run(read_stream, write_stream, app.create_initialization_options())

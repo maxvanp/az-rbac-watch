@@ -42,14 +42,16 @@ def _contributor_def() -> ScannedRoleDefinition:
         id="/subscriptions/sub-1/providers/Microsoft.Authorization/roleDefinitions/contrib-guid",
         role_name="Contributor",
         role_type=RoleType.BUILT_IN,
-        permissions=[{
-            "actions": ["*"],
-            "not_actions": [
-                "Microsoft.Authorization/*/Delete",
-                "Microsoft.Authorization/*/Write",
-                "Microsoft.Authorization/elevateAccess/Action",
-            ],
-        }],
+        permissions=[
+            {
+                "actions": ["*"],
+                "not_actions": [
+                    "Microsoft.Authorization/*/Delete",
+                    "Microsoft.Authorization/*/Write",
+                    "Microsoft.Authorization/elevateAccess/Action",
+                ],
+            }
+        ],
     )
 
 

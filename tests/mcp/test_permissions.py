@@ -78,12 +78,14 @@ class TestFindRolesGrantingAction:
             id="/providers/Microsoft.Authorization/roleDefinitions/custom-guid",
             role_name="CustomNoDelete",
             role_type=RoleType.CUSTOM,
-            permissions=[{
-                "actions": ["Microsoft.Compute/*"],
-                "not_actions": ["Microsoft.Compute/virtualMachines/delete"],
-                "data_actions": [],
-                "not_data_actions": [],
-            }],
+            permissions=[
+                {
+                    "actions": ["Microsoft.Compute/*"],
+                    "not_actions": ["Microsoft.Compute/virtualMachines/delete"],
+                    "data_actions": [],
+                    "not_data_actions": [],
+                }
+            ],
         )
         result = find_roles_granting_action("Microsoft.Compute/virtualMachines/delete", [custom])
         assert len(result) == 0
