@@ -37,10 +37,12 @@ dev = [
     "ruff>=0.5.0",
     "types-PyYAML>=6.0",
 ]
+mcp = ["mcp>=1.9"]
 docs = [
     "mkdocs-material",
     "mkdocs-minify-plugin",
 ]
+dev-mcp = ["az-rbac-watch[dev,mcp]"]
 
 [project.urls]
 Homepage = "https://github.com/maxvanp/az-rbac-watch"
@@ -50,6 +52,7 @@ Changelog = "https://github.com/maxvanp/az-rbac-watch/blob/main/CHANGELOG.md"
 
 [project.scripts]
 az-rbac-watch = "az_rbac_watch.cli:app"
+csight = "az_rbac_watch.mcp.server:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
