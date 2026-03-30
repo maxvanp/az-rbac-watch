@@ -24,6 +24,105 @@ pip install az-rbac-watch
 
 Requires Python ≥ 3.12 and [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) for authentication.
 
+## MCP Server — CloudSight
+
+CloudSight gives AI agents (Claude Code, Cursor, etc.) the ability to audit your Azure RBAC in natural language.
+
+### Install with MCP support
+
+```bash
+pip install az-rbac-watch[mcp]
+```
+
+### Configure in Claude Code
+
+Add to your `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "cloudsight-rbac": {
+      "command": "csight"
+    }
+  }
+}
+```
+
+### Configure in Cursor
+
+```json
+{
+  "mcpServers": {
+    "cloudsight-rbac": {
+      "command": "uvx",
+      "args": ["--from", "az-rbac-watch[mcp]", "csight"]
+    }
+  }
+}
+```
+
+### Prerequisites
+
+```bash
+az login
+```
+
+The server uses your Azure CLI session (`DefaultAzureCredential`). It only needs **Reader** access.
+
+### Tools
+
+| Tool | Question it answers |
+|------|-------------------|
+| `rbac_scan` | "Is my environment secure?" — risk score, findings, orphans, top actions |
+| `rbac_who_can` | "Who can delete VMs in prod?" — full permission chain resolution |
+| `rbac_blast_radius` | "If this SP is compromised, what's the damage?" — impact scoring |
+| `rbac_discover` | "Generate a security config" — auto-creates cloudsight.yaml |
+
+### Custom rules
+
+Every organization is different. Create a `cloudsight.yaml` to define YOUR security policy:
+
+```yaml
+version: "2.0"
+scope: explicit
+subscriptions:
+  - id: "your-sub-id"
+    name: "Production"
+
+rules:
+  # What is FORBIDDEN
+  - name: no-owner-at-sub
+    type: governance
+    severity: critical
+    description: "Owner forbidden at subscription scope"
+    remediation: "Scope to a resource group or use PIM"
+    match:
+      scope_prefix: /subscriptions/
+      role: Owner
+
+  # What SHOULD exist
+  - name: platform-team-access
+    type: baseline
+    description: "Platform team needs Contributor on platform MG"
+    match:
+      principal_id: "your-group-id"
+      role: Contributor
+      scope: /providers/Microsoft.Management/managementGroups/mg-platform
+```
+
+Then ask your AI agent: "scan my environment using the policy in cloudsight.yaml"
+
+Or generate a starter config: "generate a security config for my environment"
+
+### Security
+
+CloudSight follows the [OWASP MCP Server Security Guide](https://genai.owasp.org/resource/a-practical-guide-for-secure-mcp-server-development/):
+- Input validation on all tool arguments (path traversal prevention, format enforcement)
+- No credentials in tool responses (Azure SDK errors are sanitized)
+- Audit logging of every tool call (structured JSON to stderr)
+- Read-only: never writes to Azure, only reads RBAC data
+- Factual tool descriptions (no instructive language that could manipulate the AI agent)
+
 ## Shell completion
 
 Enable tab completion for bash, zsh, or fish:
