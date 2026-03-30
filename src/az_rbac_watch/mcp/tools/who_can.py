@@ -10,9 +10,9 @@ from __future__ import annotations
 import json
 import logging
 
+from az_rbac_watch.mcp.azure_scan import collect_all_definitions, scan_subscription_async
 from az_rbac_watch.mcp.permissions import find_roles_granting_action
 from az_rbac_watch.scanner.rbac_scanner import (
-    RbacScanResult,
     ScannedRoleDefinition,
 )
 
@@ -72,33 +72,6 @@ def _extract_subscription_id(scope: str) -> str | None:
     return None
 
 
-async def _scan_subscription(subscription_id: str | None) -> RbacScanResult:
-    """Scan Azure RBAC for one or all subscriptions.
-
-    Wraps the synchronous scanner in a way that can be mocked in tests.
-    """
-    import asyncio
-
-    from az_rbac_watch.auth.azure_clients import get_authorization_client, list_accessible_subscriptions
-    from az_rbac_watch.scanner.rbac_scanner import resolve_display_names, scan_subscription
-
-    def _sync_scan() -> RbacScanResult:
-        if subscription_id:
-            client = get_authorization_client(subscription_id)
-            sub_result = scan_subscription(client, subscription_id)
-            result = RbacScanResult(subscription_results=[sub_result])
-        else:
-            subs = list_accessible_subscriptions()
-            sub_results = []
-            for sid, name, _tenant in subs:
-                client = get_authorization_client(sid)
-                sub_results.append(scan_subscription(client, sid, name))
-            result = RbacScanResult(subscription_results=sub_results)
-        return resolve_display_names(result)
-
-    return await asyncio.to_thread(_sync_scan)
-
-
 def _scope_covers(assignment_scope: str, target_scope: str) -> bool:
     """Check if an assignment scope covers the target scope (scope inheritance).
 
@@ -106,23 +79,6 @@ def _scope_covers(assignment_scope: str, target_scope: str) -> bool:
     ``/subscriptions/sub-1/resourceGroups/rg-prod/...``.
     """
     return target_scope.lower().startswith(assignment_scope.lower())
-
-
-def _collect_all_definitions(scan_result: RbacScanResult) -> list[ScannedRoleDefinition]:
-    """Collect all role definitions from all subscription/MG results."""
-    definitions: list[ScannedRoleDefinition] = []
-    seen: set[str] = set()
-    for sub in scan_result.subscription_results:
-        for d in sub.definitions:
-            if d.id not in seen:
-                seen.add(d.id)
-                definitions.append(d)
-    for mg in scan_result.management_group_results:
-        for d in mg.definitions:
-            if d.id not in seen:
-                seen.add(d.id)
-                definitions.append(d)
-    return definitions
 
 
 def _build_role_def_id_set(definitions: list[ScannedRoleDefinition]) -> set[str]:
@@ -145,10 +101,10 @@ async def handle_who_can(
         subscription_id = _extract_subscription_id(scope)
 
     # 2. Scan Azure RBAC
-    scan_result = await _scan_subscription(subscription_id)
+    scan_result = await scan_subscription_async(subscription_id)
 
     # 3. Find role definitions that grant the requested action
-    all_definitions = _collect_all_definitions(scan_result)
+    all_definitions = collect_all_definitions(scan_result)
     granting_roles = find_roles_granting_action(action, all_definitions)
     granting_role_ids = _build_role_def_id_set(granting_roles)
     granting_role_names = sorted({d.role_name for d in granting_roles})

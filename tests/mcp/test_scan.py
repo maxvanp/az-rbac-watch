@@ -73,7 +73,7 @@ class TestScanTool:
         scan_result = _make_scan_result(assignments, subscription_id or "sub-1")
 
         with patch(
-            "az_rbac_watch.mcp.tools.scan._scan_subscription",
+            "az_rbac_watch.mcp.tools.scan.scan_subscription_async",
             new_callable=AsyncMock,
             return_value=scan_result,
         ):

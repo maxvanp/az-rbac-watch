@@ -13,7 +13,8 @@ from pathlib import Path
 
 from az_rbac_watch.config.default_rules import DEFAULT_GOVERNANCE_RULES
 from az_rbac_watch.config.policy_model import PolicyModel, Rule, RuleMatch, Subscription, save_policy_model
-from az_rbac_watch.scanner.rbac_scanner import RbacScanResult, ScannedRoleAssignment
+from az_rbac_watch.mcp.azure_scan import scan_subscription_async
+from az_rbac_watch.scanner.rbac_scanner import ScannedRoleAssignment
 
 __all__ = ["DISCOVER_TOOL_DEF", "handle_discover"]
 
@@ -64,35 +65,6 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 def _slugify(text: str) -> str:
     """Convert text to a lowercase slug for rule names."""
     return _SLUG_RE.sub("-", text.lower()).strip("-")
-
-
-async def _scan_subscription(
-    subscription_id: str | None,
-) -> RbacScanResult:
-    """Scan Azure RBAC for one or all subscriptions.
-
-    Wraps the synchronous scanner in a way that can be mocked in tests.
-    """
-    import asyncio
-
-    from az_rbac_watch.auth.azure_clients import get_authorization_client, list_accessible_subscriptions
-    from az_rbac_watch.scanner.rbac_scanner import resolve_display_names, scan_subscription
-
-    def _sync_scan() -> RbacScanResult:
-        if subscription_id:
-            client = get_authorization_client(subscription_id)
-            sub_result = scan_subscription(client, subscription_id)
-            result = RbacScanResult(subscription_results=[sub_result])
-        else:
-            subs = list_accessible_subscriptions()
-            sub_results = []
-            for sid, name, _tenant in subs:
-                client = get_authorization_client(sid)
-                sub_results.append(scan_subscription(client, sid, name))
-            result = RbacScanResult(subscription_results=sub_results)
-        return resolve_display_names(result)
-
-    return await asyncio.to_thread(_sync_scan)
 
 
 def _deduplicate_assignments(
@@ -148,7 +120,7 @@ async def handle_discover(
     from uuid import UUID
 
     # 1. Scan
-    scan_result = await _scan_subscription(subscription_id)
+    scan_result = await scan_subscription_async(subscription_id)
     all_assignments = scan_result.all_assignments
 
     # 2. Deduplicate

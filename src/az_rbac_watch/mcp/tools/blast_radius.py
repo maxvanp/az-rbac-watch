@@ -12,9 +12,9 @@ from __future__ import annotations
 import json
 import logging
 
+from az_rbac_watch.mcp.azure_scan import collect_all_definitions, scan_subscription_async
 from az_rbac_watch.mcp.categorize import CRITICAL_PATTERNS, categorize_permissions
 from az_rbac_watch.scanner.rbac_scanner import (
-    RbacScanResult,
     ScannedRoleAssignment,
     ScannedRoleDefinition,
 )
@@ -54,50 +54,6 @@ BLAST_RADIUS_TOOL_DEF = {
 }
 
 # ── Internal helpers ─────────────────────────────────────────────
-
-
-async def _scan_subscription(subscription_id: str | None) -> RbacScanResult:
-    """Scan Azure RBAC for one or all subscriptions.
-
-    Wraps the synchronous scanner in a way that can be mocked in tests.
-    """
-    import asyncio
-
-    from az_rbac_watch.auth.azure_clients import get_authorization_client, list_accessible_subscriptions
-    from az_rbac_watch.scanner.rbac_scanner import resolve_display_names, scan_subscription
-
-    def _sync_scan() -> RbacScanResult:
-        if subscription_id:
-            client = get_authorization_client(subscription_id)
-            sub_result = scan_subscription(client, subscription_id)
-            result = RbacScanResult(subscription_results=[sub_result])
-        else:
-            subs = list_accessible_subscriptions()
-            sub_results = []
-            for sid, name, _tenant in subs:
-                client = get_authorization_client(sid)
-                sub_results.append(scan_subscription(client, sid, name))
-            result = RbacScanResult(subscription_results=sub_results)
-        return resolve_display_names(result)
-
-    return await asyncio.to_thread(_sync_scan)
-
-
-def _collect_all_definitions(scan_result: RbacScanResult) -> list[ScannedRoleDefinition]:
-    """Collect all role definitions from all subscription/MG results."""
-    definitions: list[ScannedRoleDefinition] = []
-    seen: set[str] = set()
-    for sub in scan_result.subscription_results:
-        for d in sub.definitions:
-            if d.id not in seen:
-                seen.add(d.id)
-                definitions.append(d)
-    for mg in scan_result.management_group_results:
-        for d in mg.definitions:
-            if d.id not in seen:
-                seen.add(d.id)
-                definitions.append(d)
-    return definitions
 
 
 def _find_principal_assignments(
@@ -216,14 +172,14 @@ async def handle_blast_radius(
     """Returns JSON with principal info, impactScore, roles, effectivePermissions, criticalAccess, recommendations."""
 
     # 1. Scan Azure RBAC
-    scan_result = await _scan_subscription(subscription_id)
+    scan_result = await scan_subscription_async(subscription_id)
 
     # 2. Find all assignments for the principal
     all_assignments = scan_result.all_assignments
     principal_assignments = _find_principal_assignments(principal, all_assignments)
 
     # 3. Resolve effective actions
-    all_definitions = _collect_all_definitions(scan_result)
+    all_definitions = collect_all_definitions(scan_result)
     effective_actions = _resolve_effective_actions(principal_assignments, all_definitions)
 
     # 4. Categorize permissions

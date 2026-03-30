@@ -111,7 +111,7 @@ async def _run_who_can(
     result = scan_result or _build_scan_result()
 
     with patch(
-        "az_rbac_watch.mcp.tools.who_can._scan_subscription",
+        "az_rbac_watch.mcp.tools.who_can.scan_subscription_async",
         new_callable=AsyncMock,
         return_value=result,
     ):

@@ -110,7 +110,7 @@ async def _run_blast_radius(
     result = scan_result or _build_scan_result()
 
     with patch(
-        "az_rbac_watch.mcp.tools.blast_radius._scan_subscription",
+        "az_rbac_watch.mcp.tools.blast_radius.scan_subscription_async",
         new_callable=AsyncMock,
         return_value=result,
     ):

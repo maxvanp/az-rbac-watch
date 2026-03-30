@@ -20,9 +20,9 @@ from az_rbac_watch.analyzers.compliance import (
 )
 from az_rbac_watch.config.default_rules import DEFAULT_GOVERNANCE_RULES
 from az_rbac_watch.config.policy_model import PolicyModel, load_policy_model
+from az_rbac_watch.mcp.azure_scan import scan_subscription_async
 from az_rbac_watch.scanner.rbac_scanner import (
     PrincipalType,
-    RbacScanResult,
     ScannedRoleAssignment,
 )
 
@@ -69,35 +69,6 @@ SCAN_TOOL_DEF = {
 }
 
 # ── Internal helpers ─────────────────────────────────────────────
-
-
-async def _scan_subscription(
-    subscription_id: str | None,
-) -> RbacScanResult:
-    """Scan Azure RBAC for one or all subscriptions.
-
-    Wraps the synchronous scanner in a way that can be mocked in tests.
-    """
-    import asyncio
-
-    from az_rbac_watch.auth.azure_clients import get_authorization_client, list_accessible_subscriptions
-    from az_rbac_watch.scanner.rbac_scanner import resolve_display_names, scan_subscription
-
-    def _sync_scan() -> RbacScanResult:
-        if subscription_id:
-            client = get_authorization_client(subscription_id)
-            sub_result = scan_subscription(client, subscription_id)
-            result = RbacScanResult(subscription_results=[sub_result])
-        else:
-            subs = list_accessible_subscriptions()
-            sub_results = []
-            for sid, name, _tenant in subs:
-                client = get_authorization_client(sid)
-                sub_results.append(scan_subscription(client, sid, name))
-            result = RbacScanResult(subscription_results=sub_results)
-        return resolve_display_names(result)
-
-    return await asyncio.to_thread(_sync_scan)
 
 
 def _detect_orphans(
@@ -198,7 +169,7 @@ async def handle_scan(
     """Scan Azure RBAC and return structured JSON with risk score, findings, orphans, and actions."""
 
     # 1. Scan Azure
-    scan_result = await _scan_subscription(subscription_id)
+    scan_result = await scan_subscription_async(subscription_id)
     all_assignments = scan_result.all_assignments
 
     # 2. Build or load policy for rule evaluation
