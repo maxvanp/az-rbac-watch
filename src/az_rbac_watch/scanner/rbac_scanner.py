@@ -108,6 +108,7 @@ class ScannedRoleDefinition(BaseModel):
     role_name: str
     role_type: RoleType
     assignable_scopes: list[str] = []
+    permissions: list[dict[str, list[str]]] = []
 
 
 class SubscriptionScanResult(BaseModel):
@@ -205,12 +206,21 @@ def scan_role_definitions(
     definitions: list[ScannedRoleDefinition] = []
     for rd in client.role_definitions.list(scope=scope):
         role_type = RoleType.CUSTOM if rd.role_type == "CustomRole" else RoleType.BUILT_IN
+        perms: list[dict[str, list[str]]] = []
+        for p in rd.permissions or []:
+            perms.append({
+                "actions": list(p.actions or []),
+                "not_actions": list(p.not_actions or []),
+                "data_actions": list(p.data_actions or []),
+                "not_data_actions": list(p.not_data_actions or []),
+            })
         definitions.append(
             ScannedRoleDefinition(
                 id=rd.id or "",
                 role_name=rd.role_name or "",
                 role_type=role_type,
                 assignable_scopes=list(rd.assignable_scopes or []),
+                permissions=perms,
             )
         )
     return definitions
@@ -332,12 +342,21 @@ def scan_role_definitions_for_scope(
     definitions: list[ScannedRoleDefinition] = []
     for rd in client.role_definitions.list(scope=scope):
         role_type = RoleType.CUSTOM if rd.role_type == "CustomRole" else RoleType.BUILT_IN
+        perms: list[dict[str, list[str]]] = []
+        for p in rd.permissions or []:
+            perms.append({
+                "actions": list(p.actions or []),
+                "not_actions": list(p.not_actions or []),
+                "data_actions": list(p.data_actions or []),
+                "not_data_actions": list(p.not_data_actions or []),
+            })
         definitions.append(
             ScannedRoleDefinition(
                 id=rd.id or "",
                 role_name=rd.role_name or "",
                 role_type=role_type,
                 assignable_scopes=list(rd.assignable_scopes or []),
+                permissions=perms,
             )
         )
     return definitions
