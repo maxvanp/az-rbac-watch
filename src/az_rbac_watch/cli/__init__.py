@@ -59,6 +59,7 @@ from az_rbac_watch.cli import (  # noqa: E402, F401
     cmd_audit,
     cmd_diff,
     cmd_discover,
+    cmd_mcp,
     cmd_scan,
     cmd_snapshot,
     cmd_validate,
