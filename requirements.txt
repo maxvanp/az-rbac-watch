@@ -5,18 +5,18 @@ annotated-doc==0.0.4
     # via typer
 annotated-types==0.7.0
     # via pydantic
-anyio==4.12.1
+anyio==4.13.0
     # via httpx
 azure-common==1.1.28
     # via
     #   azure-mgmt-authorization
     #   azure-mgmt-subscription
-azure-core==1.38.2
+azure-core==1.39.0
     # via
     #   azure-identity
     #   azure-mgmt-core
     #   msrest
-azure-identity==1.25.2
+azure-identity==1.25.3
     # via az-rbac-watch
 azure-mgmt-authorization==4.0.0
     # via az-rbac-watch
@@ -41,9 +41,9 @@ certifi==2026.2.25
     #   requests
 cffi==2.0.0 ; platform_python_implementation != 'PyPy'
     # via cryptography
-charset-normalizer==3.4.5
+charset-normalizer==3.4.7
     # via requests
-click==8.3.1
+click==8.3.2
     # via
     #   mkdocs
     #   typer
@@ -53,7 +53,7 @@ colorama==0.4.6
     #   mkdocs
     #   mkdocs-material
     #   pytest
-coverage==7.13.4
+coverage==7.13.5
     # via pytest-cov
 cryptography==46.0.7
     # via
@@ -96,7 +96,7 @@ jinja2==3.1.6
     #   mkdocs-material
 jsmin==3.0.1
     # via mkdocs-minify-plugin
-librt==0.8.1 ; platform_python_implementation != 'PyPy'
+librt==0.9.0 ; platform_python_implementation != 'PyPy'
     # via mypy
 markdown==3.10.2
     # via
@@ -119,15 +119,15 @@ mkdocs==1.6.1
     # via
     #   mkdocs-material
     #   mkdocs-minify-plugin
-mkdocs-get-deps==0.2.0
+mkdocs-get-deps==0.2.2
     # via mkdocs
-mkdocs-material==9.7.4
+mkdocs-material==9.7.6
     # via az-rbac-watch
 mkdocs-material-extensions==1.3.1
     # via mkdocs-material
 mkdocs-minify-plugin==0.8.0
     # via az-rbac-watch
-msal==1.35.1
+msal==1.36.0
     # via
     #   azure-identity
     #   msal-extensions
@@ -135,7 +135,7 @@ msal-extensions==1.3.1
     # via azure-identity
 msrest==0.7.1
     # via azure-mgmt-subscription
-mypy==1.19.1
+mypy==1.20.0
     # via az-rbac-watch
 mypy-extensions==1.1.0
     # via mypy
@@ -154,7 +154,7 @@ pathspec==1.0.4
     #   hatchling
     #   mkdocs
     #   mypy
-platformdirs==4.9.4
+platformdirs==4.9.6
     # via mkdocs-get-deps
 pluggy==1.6.0
     # via
@@ -165,7 +165,7 @@ pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementatio
     # via cffi
 pydantic==2.12.5
     # via az-rbac-watch
-pydantic-core==2.41.5
+pydantic-core==2.45.0
     # via pydantic
 pygments==2.20.0
     # via
@@ -177,16 +177,16 @@ pyjwt==2.12.1
     # via
     #   az-rbac-watch
     #   msal
-pymdown-extensions==10.21
+pymdown-extensions==10.21.2
     # via mkdocs-material
-pytest==9.0.2
+pytest==9.0.3
     # via
     #   az-rbac-watch
     #   pytest-asyncio
     #   pytest-cov
 pytest-asyncio==1.3.0
     # via az-rbac-watch
-pytest-cov==7.0.0
+pytest-cov==7.1.0
     # via az-rbac-watch
 python-dateutil==2.9.0.post0
     # via ghp-import
@@ -209,15 +209,15 @@ requests==2.33.1
     #   requests-oauthlib
 requests-oauthlib==2.0.0
     # via msrest
-rich==14.3.3
+rich==14.3.4
     # via
     #   az-rbac-watch
     #   typer
-ruff==0.15.5
+ruff==0.15.10
     # via az-rbac-watch
-setuptools==82.0.0
+setuptools==82.0.1
     # via setuptools-scm
-setuptools-scm==9.2.2
+setuptools-scm==10.0.5
     # via hatch-vcs
 shellingham==1.5.4
     # via typer
@@ -227,7 +227,7 @@ trove-classifiers==2026.1.14.14
     # via hatchling
 typer==0.24.1
     # via az-rbac-watch
-types-pyyaml==6.0.12.20250915
+types-pyyaml==6.0.12.20260408
     # via az-rbac-watch
 typing-extensions==4.15.0
     # via
