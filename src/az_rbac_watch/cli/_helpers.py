@@ -1,4 +1,4 @@
-"""CLI entry point for Azure Permissions Watch.
+"""CLI entry point helpers for az-rbac-watch.
 
 Commands:
 - scan     : detect RBAC drift against the desired state (baseline rules)
@@ -299,8 +299,9 @@ def _load_or_build_model(
             raise typer.Exit(code=2)
         return _load_policy_or_exit(policy)
 
-    # Auto-detect a policy file in the current directory
-    if not subscription and not management_group:
+    # Auto-detect a policy file only when no explicit scope intent is provided.
+    # If --tenant-id is set, keep ad-hoc mode and ignore local policy files.
+    if not subscription and not management_group and tenant_id is None:
         detected = _detect_policy_file()
         if detected is not None:
             console.print(f"[dim]Using policy file: ./{detected.name}[/dim]")

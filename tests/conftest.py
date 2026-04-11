@@ -1,4 +1,4 @@
-"""Shared fixtures for Azure Permissions Watch tests."""
+"""Shared fixtures for az-rbac-watch tests."""
 
 from __future__ import annotations
 

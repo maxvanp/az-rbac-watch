@@ -33,6 +33,7 @@ az-rbac-watch  # audit is the default command
 | `--verbose` | `-v` | Enable debug logging |
 | `--dry-run` | | Show scan plan without making API calls |
 | `--debug` | | Show full traceback on error |
+| `--framework NAME` | | Map findings to a compliance framework (e.g. `CIS` or path to YAML) |
 | `--quiet` | `-q` | Suppress all output except findings and exit code |
 | `--no-color` | | Disable colored output |
 
@@ -45,6 +46,14 @@ When no `--policy` is provided and no `-s`/`-m` flags are used, the CLI looks fo
 1. `policy.yaml`
 2. `.az-rbac-watch.yaml`
 3. `az-rbac-watch.yaml`
+
+If `--tenant-id` is provided explicitly, local policy auto-detection is skipped and ad-hoc scope resolution is used.
+
+## Framework mode constraints
+
+- `--framework` supports console output and HTML report output.
+- `--framework` with `--format json` is rejected.
+- If `--framework` and `--output` are used together, `--output` must end with `.html`.
 
 ## Examples
 
@@ -60,6 +69,9 @@ az-rbac-watch audit -p policy.yaml --format json
 
 # JSON output to file
 az-rbac-watch audit -p policy.yaml --format json -o audit.json
+
+# Framework compliance report (HTML)
+az-rbac-watch audit -p policy.yaml --framework CIS --output compliance.html
 
 # Exclude a sandbox subscription
 az-rbac-watch audit -p policy.yaml --exclude-subscription 22222222-2222-2222-2222-222222222222

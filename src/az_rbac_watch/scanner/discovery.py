@@ -29,14 +29,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Mapping odata.type → readable principal_type
-_ODATA_TYPE_MAP: dict[str, str] = {
-    "#microsoft.graph.user": "User",
-    "#microsoft.graph.group": "Group",
-    "#microsoft.graph.servicePrincipal": "ServicePrincipal",
-    "#microsoft.graph.device": "Device",
-}
-
 
 def _slugify_rule_name(display_name: str, role: str, scope: str) -> str:
     """Generate a human-readable rule name from assignment details."""

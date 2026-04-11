@@ -150,7 +150,7 @@ def print_drift_report(
     """Print a drift (scan) report — undeclared assignments."""
     _print_report(
         report,
-        title="Azure Permissions Watch — Drift Report",
+        title="az-rbac-watch — Drift Report",
         drift_label="Undeclared assignments",
         violation_label="",
         ok_message="No drift — actual state matches desired state.",
@@ -166,7 +166,7 @@ def print_audit_report(
     """Print an audit report — guardrail violations."""
     _print_report(
         report,
-        title="Azure Permissions Watch — Audit Report",
+        title="az-rbac-watch — Audit Report",
         drift_label="",
         violation_label="Guardrail violations",
         ok_message="No violations — all guardrails passed.",
@@ -182,7 +182,7 @@ def print_compliance_report(
     """Print a combined report (drift + violations)."""
     _print_report(
         report,
-        title="Azure Permissions Watch — Report",
+        title="az-rbac-watch — Report",
         drift_label="Undeclared assignments",
         violation_label="Guardrail violations",
         ok_message="Compliant — no findings.",
@@ -212,7 +212,7 @@ def print_discover_summary(
             f"[bold]{n_baseline}[/bold] baseline rule(s) discovered\n"
             f"Output file : [bold]{output_path}[/bold]\n\n"
             "[dim]Review and adjust the file before using it as a reference.[/dim]",
-            title="Azure Permissions Watch — Discovery",
+            title="az-rbac-watch — Discovery",
             border_style="green",
         )
     )

@@ -59,21 +59,21 @@ _SEVERITY_COLOR: dict[Severity, str] = {
 
 _MODE_LABELS: dict[ReportMode, dict[str, str]] = {
     "scan": {
-        "title": "Azure Permissions Watch — Drift Report",
+        "title": "az-rbac-watch — Drift Report",
         "drift_label": "Undeclared (drift)",
         "violation_label": "",
         "ok": "No drift — actual state matches desired state",
         "ko_tpl": "{n} undeclared assignment(s)",
     },
     "audit": {
-        "title": "Azure Permissions Watch — Audit Report",
+        "title": "az-rbac-watch — Audit Report",
         "drift_label": "",
         "violation_label": "Guardrail violations",
         "ok": "No violations — all guardrails passed",
         "ko_tpl": "{n} guardrail violation(s)",
     },
     "combined": {
-        "title": "Azure Permissions Watch — Report",
+        "title": "az-rbac-watch — Report",
         "drift_label": "Undeclared (drift)",
         "violation_label": "Guardrail violations",
         "ok": "Compliant — no findings",
@@ -463,7 +463,7 @@ _HTML_TEMPLATE = """\
   </div>
 
   {% set ts = report.scan_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') %}
-  <div class="footer">Azure Permissions Watch v{{ report.policy_version }} — generated on {{ ts }}</div>
+  <div class="footer">az-rbac-watch v{{ report.policy_version }} — generated on {{ ts }}</div>
 </div>
 <script>
 function toggleFilter(btn) {

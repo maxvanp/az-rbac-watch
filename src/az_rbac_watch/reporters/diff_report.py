@@ -77,7 +77,7 @@ _DIFF_HTML_TEMPLATE = """\
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Azure Permissions Watch — Change Report</title>
+<title>az-rbac-watch — Change Report</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body {
@@ -132,7 +132,7 @@ _DIFF_HTML_TEMPLATE = """\
 <body>
 <div class="container">
   <div class="header">
-    <h1>Azure Permissions Watch — Change Report</h1>
+    <h1>az-rbac-watch — Change Report</h1>
     <p>Tenant : {{ tenant_id }}</p>
     <p>Old snapshot : {{ old_ts }}</p>
     <p>New snapshot : {{ new_ts }}</p>
@@ -259,7 +259,7 @@ _DIFF_HTML_TEMPLATE = """\
     {% endif %}
   </div>
 
-  <div class="footer">Azure Permissions Watch — Change Report</div>
+  <div class="footer">az-rbac-watch — Change Report</div>
 </div>
 </body>
 </html>

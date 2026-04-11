@@ -97,6 +97,16 @@ def audit(
             _h.console.print(f"[bold red]Error[/bold red]: {e}")
             raise typer.Exit(code=2) from None
 
+        if fmt == "json":
+            _h.console.print(
+                "[bold red]Error[/bold red]: --framework does not support --format json. "
+                "Use console output (default) and optional --output report.html."
+            )
+            raise typer.Exit(code=2)
+        if output is not None and output.suffix.lower() != ".html":
+            _h.console.print("[bold red]Error[/bold red]: --framework output must be an .html file.")
+            raise typer.Exit(code=2)
+
     if not dry_run:
         _h._check_credentials_or_exit()
 

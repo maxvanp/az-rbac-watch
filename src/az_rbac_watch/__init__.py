@@ -1,4 +1,4 @@
-"""Azure Permissions Watch — monitoring des permissions Azure (RBAC + Entra ID)."""
+"""az-rbac-watch package."""
 
 from az_rbac_watch._version import __version__
 

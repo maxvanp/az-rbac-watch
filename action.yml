@@ -1,4 +1,4 @@
-name: "Azure Permissions Watch"
+name: "az-rbac-watch"
 description: "RBAC compliance monitoring for Azure — drift detection, governance guardrails, and change tracking."
 
 branding:
@@ -58,16 +58,18 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Install az-rbac-watch
+    - name: Install az-rbac-watch from action source
       shell: bash
-      run: pip install az-rbac-watch
+      env:
+        SETUPTOOLS_SCM_PRETEND_VERSION: 0.0.0
+      run: pip install "$GITHUB_ACTION_PATH"
 
     - name: Run az-rbac-watch
       id: run
       shell: bash
       run: |
-        # Build the CLI command
-        CMD="az-rbac-watch ${{ inputs.mode }}"
+        # Build command as an array (no eval, safer quoting)
+        CMD=("az-rbac-watch" "${{ inputs.mode }}")
 
         # diff mode uses positional arguments
         if [ "${{ inputs.mode }}" = "diff" ]; then
@@ -75,23 +77,26 @@ runs:
             echo "::error::diff mode requires old-snapshot and new-snapshot inputs"
             exit 2
           fi
-          CMD="$CMD ${{ inputs.old-snapshot }} ${{ inputs.new-snapshot }}"
+          CMD+=("${{ inputs.old-snapshot }}" "${{ inputs.new-snapshot }}")
         fi
 
         # Optional flags
         if [ -n "${{ inputs.policy }}" ]; then
-          CMD="$CMD --policy ${{ inputs.policy }}"
+          CMD+=("--policy" "${{ inputs.policy }}")
         fi
 
         if [ -n "${{ inputs.tenant-id }}" ]; then
-          CMD="$CMD --tenant-id ${{ inputs.tenant-id }}"
+          CMD+=("--tenant-id" "${{ inputs.tenant-id }}")
         fi
 
         # Comma-separated subscriptions → repeated --subscription flags
         if [ -n "${{ inputs.subscriptions }}" ]; then
           IFS=',' read -ra SUBS <<< "${{ inputs.subscriptions }}"
           for sub in "${SUBS[@]}"; do
-            CMD="$CMD --subscription $(echo "$sub" | xargs)"
+            clean_sub=$(echo "$sub" | xargs)
+            if [ -n "$clean_sub" ]; then
+              CMD+=("--subscription" "$clean_sub")
+            fi
           done
         fi
 
@@ -99,27 +104,34 @@ runs:
         if [ -n "${{ inputs.management-groups }}" ]; then
           IFS=',' read -ra MGS <<< "${{ inputs.management-groups }}"
           for mg in "${MGS[@]}"; do
-            CMD="$CMD --management-group $(echo "$mg" | xargs)"
+            clean_mg=$(echo "$mg" | xargs)
+            if [ -n "$clean_mg" ]; then
+              CMD+=("--management-group" "$clean_mg")
+            fi
           done
         fi
 
         if [ "${{ inputs.format }}" != "console" ]; then
-          CMD="$CMD --format ${{ inputs.format }}"
+          CMD+=("--format" "${{ inputs.format }}")
         fi
 
         if [ -n "${{ inputs.output }}" ]; then
-          CMD="$CMD --output ${{ inputs.output }}"
+          CMD+=("--output" "${{ inputs.output }}")
         fi
 
         if [ -n "${{ inputs.extra-args }}" ]; then
-          CMD="$CMD ${{ inputs.extra-args }}"
+          # Space-split extra args intentionally (same behavior as shell CLI usage)
+          read -r -a EXTRA <<< "${{ inputs.extra-args }}"
+          CMD+=("${EXTRA[@]}")
         fi
 
         # Execute and capture exit code
         echo "::group::az-rbac-watch ${{ inputs.mode }}"
-        echo "Running: $CMD"
+        printf 'Running:'
+        printf ' %q' "${CMD[@]}"
+        printf '\n'
         set +e
-        eval "$CMD"
+        "${CMD[@]}"
         EXIT_CODE=$?
         set -e
         echo "::endgroup::"

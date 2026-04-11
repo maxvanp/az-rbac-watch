@@ -1,4 +1,4 @@
-"""CLI package for Azure Permissions Watch."""
+"""CLI package for az-rbac-watch."""
 
 from __future__ import annotations
 

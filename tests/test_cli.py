@@ -1,4 +1,4 @@
-"""Tests for the Azure Permissions Watch CLI (typer)."""
+"""Tests for the az-rbac-watch CLI (typer)."""
 
 from __future__ import annotations
 
@@ -657,6 +657,19 @@ class TestAuditCommand:
         assert "<!DOCTYPE html>" in html
         assert "Audit" in html
 
+    def test_audit_framework_rejects_json_format(self) -> None:
+        """--framework is incompatible with --format json."""
+        result = runner.invoke(app, ["audit", "--framework", "CIS", "--format", "json"])
+        assert result.exit_code == 2
+        assert "does not support --format json" in result.output
+
+    def test_audit_framework_requires_html_output_extension(self, tmp_path: Path) -> None:
+        """--framework with --output must target an .html file."""
+        out = tmp_path / "framework.json"
+        result = runner.invoke(app, ["audit", "--framework", "CIS", "--output", str(out)])
+        assert result.exit_code == 2
+        assert "output must be an .html file" in result.output
+
 
 # ── Tests discover command ────────────────────────────────────
 
@@ -1296,6 +1309,27 @@ class TestAutoDetectPolicy:
         assert result.exit_code == 0
         # Must NOT display the auto-detection message
         assert "Using policy file:" not in result.output
+
+    @patch("az_rbac_watch.cli._helpers._build_model_from_args")
+    def test_no_auto_detect_when_tenant_id_is_explicit(
+        self, mock_build: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """--tenant-id explicit takes priority over local policy auto-detection."""
+        monkeypatch.chdir(tmp_path)
+        self._write_policy_in_cwd(tmp_path, "policy.yaml")
+
+        from az_rbac_watch.config.policy_model import PolicyModel, Subscription
+
+        mock_build.return_value = PolicyModel(
+            version="2.0",
+            tenant_id=VALID_TENANT_ID,
+            subscriptions=[Subscription(id=VALID_SUB_ID, name="Test-Sub")],
+        )
+
+        result = runner.invoke(app, ["scan", "--tenant-id", VALID_TENANT_ID, "--dry-run"])
+        assert result.exit_code == 0
+        assert "Using policy file:" not in result.output
+        mock_build.assert_called_once()
 
     @patch("az_rbac_watch.cli._helpers._build_model_from_args")
     def test_no_policy_file_falls_through(
