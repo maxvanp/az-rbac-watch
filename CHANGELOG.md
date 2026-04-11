@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recentered the README and published docs around the CLI-first workflow (`discover`, `scan`, `audit`, `validate`, `snapshot`, `diff`)
 - Clarified the project scope around a single supported interface: the CLI
 - Refreshed dependency constraints and lockfiles to address current security updates
+- Hardened the composite GitHub Action by running without shell `eval` and installing from action source for deterministic behavior
+- Tightened CLI contracts: explicit `--tenant-id` now bypasses local policy auto-detection, and framework mode enforces HTML-only output constraints
+- Standardized user-facing naming around `az-rbac-watch` in reports and package metadata
 
 ### Removed
 
