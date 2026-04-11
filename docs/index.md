@@ -33,12 +33,14 @@ Neither OPA nor Azure Policy can natively scan RBAC assignments. This tool fills
 ## Quick start
 
 ```bash
-pip install az-rbac-watch
+curl -fsSL https://raw.githubusercontent.com/maxvanp/az-rbac-watch/main/scripts/install.sh | sh
 az login
 az-rbac-watch
 ```
 
 That's it. With no arguments, `az-rbac-watch` auto-discovers all accessible subscriptions and runs a governance audit with default rules.
+
+If you prefer an explicit install step, use `uv tool install az-rbac-watch && uv tool update-shell`.
 
 ## Next steps
 

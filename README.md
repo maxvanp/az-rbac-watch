@@ -18,14 +18,24 @@ Neither OPA nor Azure Policy can natively scan Azure RBAC assignments. `az-rbac-
 ## Installation
 
 ```bash
-# Recommended — isolated install for CLI tools
-pipx install az-rbac-watch
-
-# Or with pip
-pip install az-rbac-watch
+# One-liner bootstrap (installs uv if needed, then puts az-rbac-watch on your PATH)
+curl -fsSL https://raw.githubusercontent.com/maxvanp/az-rbac-watch/main/scripts/install.sh | sh
 ```
 
-Requires Python ≥ 3.12 and [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) for authentication.
+Manual install with `uv`:
+
+```bash
+uv tool install az-rbac-watch
+uv tool update-shell
+```
+
+Fallback with `pipx`:
+
+```bash
+pipx install az-rbac-watch
+```
+
+The bootstrap script can install a compatible Python automatically through `uv`. You still need [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) for authentication.
 
 ## Shell completion
 

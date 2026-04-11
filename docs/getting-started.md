@@ -2,22 +2,25 @@
 
 ## Prerequisites
 
-- **Python 3.12+**
 - **Azure CLI** (`az`) — for authentication
 - **Azure permissions**: `Microsoft.Authorization/roleAssignments/read` on scopes you want to scan
 - **Optional**: `Directory.Read.All` on Microsoft Graph for display name resolution
+- **Optional**: Python 3.12+ if you are not using the bootstrap script or `uv`
 
 ## Install
 
 ```bash
-pip install az-rbac-watch
+curl -fsSL https://raw.githubusercontent.com/maxvanp/az-rbac-watch/main/scripts/install.sh | sh
 ```
 
-Or with uv:
+Or install explicitly with `uv`:
 
 ```bash
-uv pip install az-rbac-watch
+uv tool install az-rbac-watch
+uv tool update-shell
 ```
+
+This installs the `az-rbac-watch` command into your user tool directory so it is available directly on your `PATH`.
 
 ## Authenticate
 
