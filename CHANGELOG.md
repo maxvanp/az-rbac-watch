@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-04-11
+
 ### Added
 
 - Framework compliance mapping module (CIS Azure Benchmark)
@@ -15,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Recentered the README and published docs around the CLI-first workflow (`discover`, `scan`, `audit`, `validate`, `snapshot`, `diff`)
+- Clarified the project scope around a single supported interface: the CLI
+- Refreshed dependency constraints and lockfiles to address current security updates
 
 ### Removed
 
