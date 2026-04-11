@@ -14,6 +14,7 @@ build/
 .vscode/
 *.swp
 *.swo
+.codex
 
 # Testing
 .pytest_cache/
@@ -21,6 +22,7 @@ build/
 .ruff_cache/
 htmlcov/
 .coverage
+site/
 
 # Test policy files and reports (real tenant data)
 test_policy.yaml

@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Framework compliance mapping module (CIS Azure Benchmark)
 - CLI refactored into `cli/` package with one module per command
 
+### Changed
+
+- Recentered the README and published docs around the CLI-first workflow (`discover`, `scan`, `audit`, `validate`, `snapshot`, `diff`)
+
+### Removed
+
+- Removed the MCP server codepath and packaging extras to keep the project focused on the CLI and CI/CD workflow
+
+### Documentation
+
+- Added published command pages for `snapshot` and `diff`
+
 ## [0.8.0] - 2026-03-21
 
 ### Added

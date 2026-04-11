@@ -106,6 +106,22 @@ Check your YAML without Azure credentials:
 az-rbac-watch validate -p policy.yaml
 ```
 
+## Track changes over time
+
+Capture a point-in-time RBAC snapshot:
+
+```bash
+az-rbac-watch snapshot -p policy.yaml -o snapshot-2026-04-11.json
+```
+
+Then compare two snapshots:
+
+```bash
+az-rbac-watch diff snapshot-old.json snapshot-new.json
+```
+
+Use `--format json` for automation or `--output changes.html` to generate an HTML change report.
+
 ## Recommended workflow
 
 1. `az-rbac-watch` — quick audit with default rules
@@ -113,4 +129,6 @@ az-rbac-watch validate -p policy.yaml
 3. Add governance rules to `policy.yaml`
 4. `az-rbac-watch scan -p policy.yaml` — detect drift from baseline
 5. `az-rbac-watch audit -p policy.yaml` — check guardrails
-6. Integrate in CI/CD with `--format json`
+6. `az-rbac-watch snapshot -p policy.yaml -o snapshot.json` — capture a reference state when needed
+7. `az-rbac-watch diff old.json new.json` — review RBAC changes over time
+8. Integrate in CI/CD with `--format json`

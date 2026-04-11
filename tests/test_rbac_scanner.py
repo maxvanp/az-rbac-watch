@@ -61,6 +61,7 @@ def _make_azure_role_definition(**overrides: object) -> SimpleNamespace:
         "role_name": "Reader",
         "role_type": "BuiltInRole",
         "assignable_scopes": ["/"],
+        "permissions": [],
     }
     defaults.update(overrides)
     return SimpleNamespace(**defaults)

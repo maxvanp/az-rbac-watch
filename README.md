@@ -1,16 +1,19 @@
-# Azure Permissions Watch
+# az-rbac-watch
 
-Azure RBAC as Code — drift detection and guardrails.
+CLI for Azure RBAC drift detection, governance guardrails, and change tracking.
 
 ## What it does
 
-Two complementary commands in one tool:
+Six focused commands in one tool:
 
-- **`scan`** — **RBAC as Code** (affirmative): declare your desired RBAC state in YAML, detect drift from that state
-- **`audit`** — **Policy as Code** (negative): define forbidden patterns (guardrails), detect violations
-- **`scan --orphans-only`** — detect assignments referencing deleted principals (orphaned identities)
+- **`discover`** — generate a baseline policy YAML from current RBAC assignments
+- **`scan`** — detect drift from your declared baseline
+- **`audit`** — detect forbidden patterns and governance violations
+- **`validate`** — check policy syntax offline
+- **`snapshot`** — capture current RBAC state as JSON
+- **`diff`** — compare snapshots to track changes over time
 
-Both commands share the same RBAC scanner — the differentiating value is that neither OPA nor Azure Policy can natively scan RBAC assignments.
+Neither OPA nor Azure Policy can natively scan Azure RBAC assignments. `az-rbac-watch` fills that gap with a CLI designed for local use, scheduled checks, and CI/CD pipelines.
 
 ## Installation
 
@@ -119,6 +122,10 @@ az-rbac-watch diff snapshot_old.json snapshot_new.json
 # JSON (CI/CD)
 az-rbac-watch diff snapshot_old.json snapshot_new.json --format json -o changes.json
 ```
+
+## Core workflow
+
+Use `discover` once to capture your current baseline, then run `scan` and `audit` continuously. Add `snapshot` and `diff` when you want explicit change tracking between two points in time.
 
 ## Two axes, one tool
 
