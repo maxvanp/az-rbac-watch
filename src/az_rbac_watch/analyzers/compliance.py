@@ -103,7 +103,7 @@ class ComplianceReport(BaseModel):
     tenant_id: str
     scan_timestamp: datetime
     findings: list[ComplianceFinding] = Field(default_factory=list)
-    summary: ComplianceSummary = ComplianceSummary()
+    summary: ComplianceSummary = Field(default_factory=ComplianceSummary)
     scan_errors: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 
@@ -127,6 +127,11 @@ class _PrecomputedMatch:
         self.principal_type_in_set: frozenset[str] | None = (
             frozenset(t.lower() for t in m.principal_type_in) if m.principal_type_in else None
         )
+
+
+def _lowered_set(values: list[str]) -> frozenset[str]:
+    """Retourne un ensemble immuable en minuscules pour les comparaisons."""
+    return frozenset(value.lower() for value in values)
 
 
 def _evaluate_match(match: RuleMatch, a: ScannedRoleAssignment, pc: _PrecomputedMatch | None = None) -> bool:
@@ -153,13 +158,15 @@ def _evaluate_match(match: RuleMatch, a: ScannedRoleAssignment, pc: _Precomputed
         return False
 
     if match.role_in is not None:
-        role_in_set = pc.role_in_set if pc else {r.lower() for r in match.role_in}
-        if role_lower not in role_in_set:  # type: ignore[operator]
+        role_in_set = pc.role_in_set if pc is not None and pc.role_in_set is not None else _lowered_set(match.role_in)
+        if role_lower not in role_in_set:
             return False
 
     if match.role_not_in is not None:
-        role_not_in_set = pc.role_not_in_set if pc else {r.lower() for r in match.role_not_in}
-        if role_lower in role_not_in_set:  # type: ignore[operator]
+        role_not_in_set = (
+            pc.role_not_in_set if pc is not None and pc.role_not_in_set is not None else _lowered_set(match.role_not_in)
+        )
+        if role_lower in role_not_in_set:
             return False
 
     if match.role_type is not None and role_type_lower != match.role_type.lower():
@@ -169,8 +176,12 @@ def _evaluate_match(match: RuleMatch, a: ScannedRoleAssignment, pc: _Precomputed
         return False
 
     if match.principal_type_in is not None:
-        pt_in_set = pc.principal_type_in_set if pc else {t.lower() for t in match.principal_type_in}
-        if principal_type_lower not in pt_in_set:  # type: ignore[operator]
+        principal_type_in_set = (
+            pc.principal_type_in_set
+            if pc is not None and pc.principal_type_in_set is not None
+            else _lowered_set(match.principal_type_in)
+        )
+        if principal_type_lower not in principal_type_in_set:
             return False
 
     if match.principal_id is not None and a.principal_id.lower() != match.principal_id.lower():

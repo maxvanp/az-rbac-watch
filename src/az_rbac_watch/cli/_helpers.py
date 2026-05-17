@@ -13,7 +13,7 @@ import logging
 import traceback
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Literal  # noqa: F401
+from typing import Literal
 from uuid import UUID
 
 import typer
@@ -53,7 +53,6 @@ from az_rbac_watch.scanner.rbac_scanner import RbacScanResult, resolve_display_n
 __all__ = [
     # Re-exported for command modules
     "ComplianceReport",
-    "Literal",
     "ManagementGroup",
     "PolicyModel",
     "RbacScanResult",

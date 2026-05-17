@@ -13,7 +13,7 @@ from pathlib import Path
 from uuid import UUID
 
 import yaml
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from az_rbac_watch.utils.scope import scope_group_key
 
@@ -132,7 +132,7 @@ class Rule(BaseModel):
     type: str = "governance"
     description: str = ""
     severity: str = "high"
-    match: RuleMatch = RuleMatch()
+    match: RuleMatch = Field(default_factory=RuleMatch)
     remediation: str | None = None
 
     @field_validator("name")
@@ -164,11 +164,11 @@ class PolicyModel(BaseModel):
     version: str
     tenant_id: UUID
     scope: str = "explicit"
-    subscriptions: list[Subscription] = []
-    management_groups: list[ManagementGroup] = []
-    exclude_subscriptions: list[str] = []
-    exclude_management_groups: list[str] = []
-    rules: list[Rule] = []
+    subscriptions: list[Subscription] = Field(default_factory=list)
+    management_groups: list[ManagementGroup] = Field(default_factory=list)
+    exclude_subscriptions: list[str] = Field(default_factory=list)
+    exclude_management_groups: list[str] = Field(default_factory=list)
+    rules: list[Rule] = Field(default_factory=list)
 
     @field_validator("version")
     @classmethod

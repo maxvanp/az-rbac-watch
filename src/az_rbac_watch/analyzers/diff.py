@@ -7,7 +7,7 @@ but with different field values.
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from az_rbac_watch.scanner.snapshot import SnapshotAssignment
 
@@ -33,9 +33,9 @@ class DiffChange(BaseModel):
 class DiffResult(BaseModel):
     """Result of comparing two sets of assignments."""
 
-    added: list[SnapshotAssignment] = []
-    removed: list[SnapshotAssignment] = []
-    modified: list[DiffChange] = []
+    added: list[SnapshotAssignment] = Field(default_factory=list)
+    removed: list[SnapshotAssignment] = Field(default_factory=list)
+    modified: list[DiffChange] = Field(default_factory=list)
 
     @property
     def has_changes(self) -> bool:

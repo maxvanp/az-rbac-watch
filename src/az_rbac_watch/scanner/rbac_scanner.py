@@ -10,12 +10,12 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from enum import StrEnum
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
 from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from az_rbac_watch.auth.azure_clients import get_authorization_client, resolve_principal_names
 
@@ -53,6 +53,9 @@ logger = logging.getLogger(__name__)
 # Regex to extract the GUID from an ARM role definition ID
 # Ex: "/subscriptions/.../providers/Microsoft.Authorization/roleDefinitions/acdd72a7-..."
 _ROLE_DEF_GUID_RE = re.compile(r"/roleDefinitions/([0-9a-fA-F-]+)$")
+
+_ScopeType = Literal["mg", "sub"]
+_ScopeScanResult = tuple[Literal["mg"], "ManagementGroupScanResult"] | tuple[Literal["sub"], "SubscriptionScanResult"]
 
 
 # ── Enums ─────────────────────────────────────────────────────────
@@ -107,7 +110,7 @@ class ScannedRoleDefinition(BaseModel):
     id: str
     role_name: str
     role_type: RoleType
-    assignable_scopes: list[str] = []
+    assignable_scopes: list[str] = Field(default_factory=list)
 
 
 class SubscriptionScanResult(BaseModel):
@@ -115,9 +118,9 @@ class SubscriptionScanResult(BaseModel):
 
     subscription_id: str
     subscription_name: str
-    assignments: list[ScannedRoleAssignment] = []
-    definitions: list[ScannedRoleDefinition] = []
-    errors: list[str] = []
+    assignments: list[ScannedRoleAssignment] = Field(default_factory=list)
+    definitions: list[ScannedRoleDefinition] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
 
 
 class ManagementGroupScanResult(BaseModel):
@@ -125,17 +128,17 @@ class ManagementGroupScanResult(BaseModel):
 
     management_group_id: str
     management_group_name: str
-    assignments: list[ScannedRoleAssignment] = []
-    definitions: list[ScannedRoleDefinition] = []
-    errors: list[str] = []
+    assignments: list[ScannedRoleAssignment] = Field(default_factory=list)
+    definitions: list[ScannedRoleDefinition] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
 
 
 class RbacScanResult(BaseModel):
     """Aggregated result of RBAC scanning for all management groups and subscriptions."""
 
-    management_group_results: list[ManagementGroupScanResult] = []
-    subscription_results: list[SubscriptionScanResult] = []
-    warnings: list[str] = []
+    management_group_results: list[ManagementGroupScanResult] = Field(default_factory=list)
+    subscription_results: list[SubscriptionScanResult] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
     @property
     def all_assignments(self) -> list[ScannedRoleAssignment]:
@@ -461,29 +464,34 @@ class RbacScanner:
         )
 
         # Collect tasks in order (MG first, then subscriptions)
-        tasks: list[tuple[str, str, str]] = []  # (type, id, name)
+        tasks: list[tuple[_ScopeType, str, str]] = []  # (type, id, name)
         for mg in policy.management_groups:
             tasks.append(("mg", mg.id, mg.name or mg.id))
         for sub in policy.subscriptions:
             tasks.append(("sub", str(sub.id), sub.name or str(sub.id)))
 
         # Execute in parallel
-        mg_results: list[ManagementGroupScanResult] = []
-        sub_results: list[SubscriptionScanResult] = []
-
         with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
-            future_to_idx = {}
+            future_to_idx: dict[Future[_ScopeScanResult], int] = {}
             for idx, (scope_type, scope_id, scope_name) in enumerate(tasks):
                 client_sub_id = dummy_sub_id if scope_type == "mg" else scope_id
                 future = executor.submit(self._scan_scope, scope_type, scope_id, scope_name, client_sub_id)
                 future_to_idx[future] = idx
 
             # Collect in completion order for progress callback
-            ordered: dict[int, tuple[str, ManagementGroupScanResult | SubscriptionScanResult]] = {}
+            ordered_mg_results: dict[int, ManagementGroupScanResult] = {}
+            ordered_sub_results: dict[int, SubscriptionScanResult] = {}
             for future in as_completed(future_to_idx):
                 idx = future_to_idx[future]
                 scope_type_result, scope_result = future.result()
-                ordered[idx] = (scope_type_result, scope_result)
+                if scope_type_result == "mg":
+                    if not isinstance(scope_result, ManagementGroupScanResult):
+                        raise TypeError("management group scan returned a subscription result")
+                    ordered_mg_results[idx] = scope_result
+                else:
+                    if not isinstance(scope_result, SubscriptionScanResult):
+                        raise TypeError("subscription scan returned a management group result")
+                    ordered_sub_results[idx] = scope_result
                 if self._progress_callback:
                     scope_type, _, scope_name = tasks[idx]
                     self._progress_callback(
@@ -491,25 +499,17 @@ class RbacScanner:
                         scope_name,
                     )
 
-        # Put back in submission order for deterministic result
-        for idx in sorted(ordered):
-            scope_type, scope_result = ordered[idx]
-            if scope_type == "mg":
-                mg_results.append(scope_result)  # type: ignore[arg-type]
-            else:
-                sub_results.append(scope_result)  # type: ignore[arg-type]
-
-        result.management_group_results = mg_results
-        result.subscription_results = sub_results
+        result.management_group_results = [ordered_mg_results[idx] for idx in sorted(ordered_mg_results)]
+        result.subscription_results = [ordered_sub_results[idx] for idx in sorted(ordered_sub_results)]
         return result
 
     def _scan_scope(
         self,
-        scope_type: str,
+        scope_type: _ScopeType,
         scope_id: str,
         scope_name: str,
         client_sub_id: str,
-    ) -> tuple[str, ManagementGroupScanResult | SubscriptionScanResult]:
+    ) -> _ScopeScanResult:
         """Scans a single scope (management group or subscription)."""
         logger.info("Scanning RBAC %s %s (%s)", scope_type, scope_name, scope_id)
         try:

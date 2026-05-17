@@ -11,7 +11,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from az_rbac_watch.scanner.rbac_scanner import RbacScanResult
 
@@ -38,8 +38,8 @@ class SnapshotMetadata(BaseModel):
 class SnapshotScope(BaseModel):
     """Scopes included in the snapshot."""
 
-    subscriptions: list[dict[str, str]] = []
-    management_groups: list[dict[str, str]] = []
+    subscriptions: list[dict[str, str]] = Field(default_factory=list)
+    management_groups: list[dict[str, str]] = Field(default_factory=list)
 
 
 class SnapshotAssignment(BaseModel):
@@ -67,9 +67,9 @@ class Snapshot(BaseModel):
 
     version: str = "1.0"
     metadata: SnapshotMetadata
-    scopes: SnapshotScope = SnapshotScope()
-    assignments: list[SnapshotAssignment] = []
-    role_definitions: list[SnapshotRoleDefinition] = []
+    scopes: SnapshotScope = Field(default_factory=SnapshotScope)
+    assignments: list[SnapshotAssignment] = Field(default_factory=list)
+    role_definitions: list[SnapshotRoleDefinition] = Field(default_factory=list)
 
 
 def build_snapshot(
