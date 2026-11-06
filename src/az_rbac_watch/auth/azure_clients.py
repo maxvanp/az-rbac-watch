@@ -14,7 +14,7 @@ import httpx
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.authorization import AuthorizationManagementClient
-from azure.mgmt.managementgroups import ManagementGroupsAPI
+from azure.mgmt.managementgroups import ManagementGroupsMgmtClient
 from azure.mgmt.subscription import SubscriptionClient
 
 if TYPE_CHECKING:
@@ -173,7 +173,9 @@ def list_accessible_management_groups(
         ClientAuthenticationError: If Azure authentication fails.
     """
     cred = credential or get_credential()
-    client = ManagementGroupsAPI(cred)
+    # azure-mgmt-managementgroups 2.0.0 renomme ManagementGroupsAPI.
+    # display_name reste accessible via le modèle aplati (properties.displayName).
+    client = ManagementGroupsMgmtClient(cred)
     result: list[tuple[str, str]] = []
     for mg in client.management_groups.list():
         result.append(

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Require `azure-mgmt-managementgroups` 2.0.0 and use `ManagementGroupsMgmtClient` (`ManagementGroupsAPI` was removed)
+- Raise the `cryptography` floor to 50.0.0 (CVE-2026-69247) and the `pyjwt` floor to 2.13.0, and refresh the exported `requirements.txt` set
+- Keep Markdown out of `ruff format` so historical plan snippets are not rewritten by Ruff 0.16+
+
 ## [0.10.1] - 2026-04-11
 
 ### Added

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from azure.mgmt.managementgroups.models import ManagementGroupInfo
 
 from az_rbac_watch.auth.azure_clients import (
     list_accessible_management_groups,
@@ -327,7 +328,7 @@ class TestListAccessibleSubscriptions:
 
 
 class TestListAccessibleManagementGroups:
-    @patch("az_rbac_watch.auth.azure_clients.ManagementGroupsAPI")
+    @patch("az_rbac_watch.auth.azure_clients.ManagementGroupsMgmtClient")
     def test_happy_path(self, mock_cls: MagicMock) -> None:
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
@@ -342,13 +343,13 @@ class TestListAccessibleManagementGroups:
         assert result[0] == ("mg-prod", "Production")
         assert result[1] == ("mg-dev", "Development")
 
-    @patch("az_rbac_watch.auth.azure_clients.ManagementGroupsAPI")
+    @patch("az_rbac_watch.auth.azure_clients.ManagementGroupsMgmtClient")
     def test_sdk_error_propagates(self, mock_cls: MagicMock) -> None:
         mock_cls.side_effect = Exception("No access")
         with pytest.raises(Exception, match="No access"):
             list_accessible_management_groups(credential=_make_credential_mock())
 
-    @patch("az_rbac_watch.auth.azure_clients.ManagementGroupsAPI")
+    @patch("az_rbac_watch.auth.azure_clients.ManagementGroupsMgmtClient")
     def test_credential_injected(self, mock_cls: MagicMock) -> None:
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
@@ -357,3 +358,15 @@ class TestListAccessibleManagementGroups:
         cred = _make_credential_mock()
         list_accessible_management_groups(credential=cred)
         mock_cls.assert_called_once_with(cred)
+
+    @patch("az_rbac_watch.auth.azure_clients.ManagementGroupsMgmtClient")
+    def test_reads_flattened_display_name(self, mock_cls: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_cls.return_value = mock_client
+        mock_client.management_groups.list.return_value = [
+            ManagementGroupInfo({"name": "mg-prod", "properties": {"displayName": "Production"}}),
+        ]
+
+        result = list_accessible_management_groups(credential=_make_credential_mock())
+
+        assert result == [("mg-prod", "Production")]

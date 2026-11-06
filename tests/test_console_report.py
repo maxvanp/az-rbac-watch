@@ -29,7 +29,8 @@ TENANT_ID = "11111111-1111-1111-1111-111111111111"
 def _make_console() -> tuple[Console, StringIO]:
     """Create a Rich console capturing output to a StringIO (no color)."""
     buf = StringIO()
-    console = Console(file=buf, highlight=False, no_color=True, width=200)
+    # Rich 15 ignores an explicit width on a dumb terminal unless height is set too.
+    console = Console(file=buf, highlight=False, no_color=True, width=200, height=50)
     return console, buf
 
 
@@ -309,7 +310,7 @@ class TestRemediationHint:
 def _make_markup_console() -> tuple[Console, StringIO]:
     """Create a Rich console that preserves markup (for link assertions)."""
     buf = StringIO()
-    console = Console(file=buf, highlight=False, no_color=True, width=200, markup=True)
+    console = Console(file=buf, highlight=False, no_color=True, width=200, height=50, markup=True)
     return console, buf
 
 
@@ -318,9 +319,21 @@ class TestConsolePortalLinks:
 
     @staticmethod
     def _make_link_console() -> tuple[Console, StringIO]:
-        """Console with force_terminal so Rich emits OSC 8 hyperlink sequences."""
+        """Console with an explicit color system so Rich emits OSC 8 hyperlinks.
+
+        Rich 15 skips link sequences when the color system is undetected
+        (``TERM=dumb`` or ``NO_COLOR``), even if ``width`` is set.
+        """
         buf = StringIO()
-        console = Console(file=buf, highlight=False, force_terminal=True, width=200)
+        console = Console(
+            file=buf,
+            highlight=False,
+            force_terminal=True,
+            color_system="standard",
+            no_color=False,
+            width=200,
+            height=50,
+        )
         return console, buf
 
     def test_scope_link_in_output(self) -> None:
